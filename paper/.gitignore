@@ -1,0 +1,21 @@
+# The paper itself
+/*.pdf
+
+# knitr and R markdown default cache directories
+/*_cache/
+/tex2pdf*/
+/*_files/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+.Rproj.user
+
+# .DS_Store Files from MacOS
+*.DS_Store
+
+# Backup files created by the joe editor
+*~
+*DEADJOE
+
+ 

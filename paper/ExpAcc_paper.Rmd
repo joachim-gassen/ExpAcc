@@ -1,0 +1,604 @@
+---
+output: 
+  pdf_document: 
+    number_sections: true
+title: Exploring the Accrual Landscape \vspace{1cm}
+subtitle: A Note on the Usefulness of Open Science for Empirical Archival Research^[We appreciate feedback from the Humboldt Accounting Brown Bag. The authors can be reached via gassen@wiwi.hu-berlin.de]\vspace{1.5cm}
+author: | 
+  | Martin Bierey and Joachim Gassen 
+  | Humboldt-Universität zu Berlin \vspace{1cm}
+abstract: "This research-in-progress note replicates, explores and extends the findings of @BLZ to provide three distinct contributions to the literature. First, we show that their key findings about the drastic change in the U.S. cash flow/accrual association extend to an international sample. We find that changes of the underlying cash flow distribution explain roughly 80 % of the observed variation and we document that the remaining time-trend is surprisingly robust across countries. Second, as we obtain our findings mostly by using visually-oriented data exploration tools, we demonstrate the benefit of thorough data exploration for  archival empirical accounting work. Third, by providing an interactive presentation of our key results online ([click here to ExPanD](https://jgassen.shinyapps.io/ExpAcc)) and by disclosing all of our material together with an Appendix detailing the necessary steps to reproduce our work, we hope to promote the benefits of open science.\\vspace{2cm}" 
+date: |
+  | `r format(Sys.time(), '%B %d, %Y')`
+  | Version 0.1.0
+
+geometry: margin=1in
+fontfamily: mathpazo
+fontsize: 11pt
+ident: yes
+header-includes:
+- \usepackage{setspace}\doublespacing
+- \setlength{\parindent}{4em}
+- \setlength{\parskip}{0em}
+bibliography: BibFile.bib
+biblio-style: apsr
+endnote: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, table.align = "center", cache.lazy = FALSE, message = FALSE, error = FALSE, warning = FALSE, clean = FALSE)
+library(knitr)
+opts_knit$set(root.dir = "..", fig.pos = 'h')
+library(kableExtra)
+library(captioner)
+library(animation)
+
+install_pkg_if_missing_and_attach <- function(pkg_string) {
+  lib_str <- strsplit(pkg_string, "/")[[1]][length(strsplit(pkg_string, "/")[[1]])]
+  if (!require(lib_str, character.only = TRUE)) {
+    if (!grepl("/", pkg_string)) install.packages(pkg_string)
+    else devtools::install_github(pkg_string)
+    library(lib_str, character.only = TRUE)
+  }
+} 
+
+pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe",
+          "tidyverse", "joachim-gassen/ExPanDaR",
+          "lubridate", "broom", "tweenr", "moments",
+          "Hmisc", "RCurl", "nteetor/gganimate")
+
+invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
+
+# Set the below to TRUE when you want repull consumer price data (needs to be done at least once)
+
+refresh <- TRUE
+
+
+# Set the below to TRUE if you want repull Compustat data from WRDS 
+# This also needs to be done at least once and can also be done by running
+# code/fetch_wrds_data.R directly.
+#
+# NOTE: code/fetch_wrds_data.R needs editing prior to sourcing!
+#
+# Refer to the Appendix in the paper for additional guidance
+
+fetch_wrds_data <- FALSE
+
+table_nums <- captioner(prefix = "Table")
+figure_nums <- captioner(prefix = "Figure")
+t_ref <- function(x) {
+  stringr::str_extract(table_nums(x), "[^:]*")
+}
+f_ref <- function(x) {
+  stringr::str_extract(figure_nums(x), "[^:]*")
+}
+
+tab_vd <- table_nums(name = "tab_vd", 
+                        caption = "Variable definitions")
+tab_ds_rs <- table_nums(name = "tab_ds_rs", 
+                        caption = "Descriptive statistics for the replicated sample")
+tab_ds_ts <- table_nums(name = "tab_ds_ts", 
+                        caption = "Descriptive statistics for the test sample")
+tab_dist_tests_cfo <- table_nums(name = "tab_dist_tests_cfo", 
+                        caption = "Test for association of $CFO$ distribution statistics with model (\\ref{level_reg}) $b_1$ coefficient")
+tab_dist_tests_adjr2 <- table_nums(name = "tab_dist_tests_adjr2", 
+                        caption = "Test for association of $CFO$ distribution statistics with model (\\ref{level_reg}) $Adj. R^2$")
+tab_corr_yearly_us_sample <- table_nums(name = "tab_corr_yearly_us_sample", 
+                        caption = "Correlation table for yearly U.S. sample")
+tab_world_sample <- table_nums(name = "tab_world_sample", 
+                        caption = "International sample: Number of observations and years per country")
+tab_tests_world <- table_nums(name = "tab_tests_world", 
+                        caption = "Results of model 3 and model 4 for international sample")
+
+
+fig_blz_ds <- figure_nums(nam = "fig_blz_ds",
+                          caption = "Panel A of Table 1 from BLZ")
+fig_level_results <- figure_nums(nam = "fig_level_results",
+                          caption = "Regression results for yearly estimates of model (\\ref{level_reg}) compared to results of BLZ, Table 2")
+fig_level_by_at <- figure_nums(nam = "fig_level_by_at",
+                          caption = "$Time$ coefficient of model (\\ref{time_reg}) by size deciles")
+fig_level_by_ind <- figure_nums(nam = "fig_level_by_ind",
+                          caption = "$Time$ coefficient of model (\\ref{time_reg}) by industries")
+fig_level_by_cfo <- figure_nums(nam = "fig_level_by_cfo",
+                          caption = "$Time$ coefficient of model (\\ref{time_reg}) by cash flow deciles")
+fig_level_by_cfo_r2 <- figure_nums(nam = "fig_level_by_cfo_r2",
+                          caption = "$Time$ coefficient of model (\\ref{time_reg}) with adjr2 as dependent variable by cash flow deciles")
+fig_level_by_cfo_comp <- figure_nums(nam = "fig_level_by_cfo_comp",
+                          caption = "$CFO$ coefficients and $Adj. R^2$ of model (\\ref{level_reg}) by cash flow deciles")
+fig_scatter_sbs <- figure_nums(nam = "fig_scatter_sbs",
+                          caption = "$CFO$ and $TACC$ scatter plots (sample of 20,000 observations for each period).")
+fig_cfo_density_sbs <- figure_nums(nam = "fig_cfo_density_sbs",
+                          caption = "Density of $CFO$")
+fig_time_effect_cfo_world_sbs <- figure_nums(nam = "fig_time_effect_cfo_world_sbs",
+                          caption = "$Time$ coefficient of model (\\ref{time_reg}) around the world for different model specifications")
+fig_time_effect_adjr2_world_sbs <- figure_nums(nam = "fig_time_effect_adjr2_world_sbs",
+                          caption = "$Adj. R^2$ coefficient of model (\\ref{time_reg}) around the world for different model specifications")
+fig_yfe_residcfo_world_sbs <- figure_nums(nam = "fig_yfe_residcfo_world_sbs",
+                          caption = "Yearly fixed effects of a baseline model regressing $Resid_{cfo}$ on $Time$ for the world sample")
+fig_yfe_residadjr2_world_sbs <- figure_nums(nam = "fig_yfe_residadjr2_world_sbs",
+                          caption = "Yearly fixed effects of a baseline model regressing $Resid_{Adj. R^2}$ on $Time$ for the world sample")
+
+
+```
+
+``` {r utils, include=FALSE}
+source("code/utils.R")
+source("code/samples.R")
+source("code/tables.R")
+source("code/figures.R")
+source("code/videos.R")
+```
+
+``` {r sample, include=FALSE, cache=TRUE}
+if (fetch_wrds_data) source("code/fetch_wrds_data.R", local = new.env())
+
+list2env(prepare_us_samples(), environment())
+list2env(prepare_int_samples(), environment())
+```
+
+\pagebreak
+
+# Introduction
+  
+The scientific community widely agrees that the replication of empirical results is a central building block of sound empirical evidence. Yet, published replication studies are rare. While several reasons for this observation have been discussed by prior literature, most commentators agree that the lack of established reproducible workflows make replications inherently costly to do. 
+
+This work-in-progress note aims to promote replications of empirical archival studies in three ways: First, by replicating and extending the findings of an influential accounting study we are able to provide additional insights into the association between accruals and cash flows thereby highlighting the benefits of replications. Second, we gain our most important insights into the dataset by using data visualization tools. This data exploration workflow can be mimicked by future researchers to explore and extend existing evidence. Third, our research note aims to reduce the costs of future replications and extensions of archival studies in two ways: For one, we apply an open science workflow that allows researchers to immediately use and build on our underlying code and data. For another, we develop and provide an interactive toolbox that allows researchers to assess the robustness of archival studies in a web-based environment, which is designed to make this activity fun and easy.
+
+The resulting reduction in replication costs should have the following three effects: (a) By allowing readers to explore both data and code, results can be replicated on the fly. (b) It is easy for interested readers to assess the robustness of empirical archival work, reducing the risk of p-hacking and increasing the confidence in published results. (c) It allows interested researchers to more efficiently build on prior evidence, potentially yielding quicker evolution of scientific knowledge.
+
+To demonstrate the usefulness of our workflow, we replicate and extend a study addressing a key area of interest to empirical archival researchers in the area of financial accounting: the statistical properties of cash flow/accrual relation. The central objective of accruals is to smooth temporary fluctuations in cash flows, thereby contributing to a negative association between accruals and concurrent cash flows from operations. @BLZ (BLZ from now on) analyze the time trend of this association for U.S. firms and provide compelling evidence that the negative association between accruals and cash flow from operations diminishes over time. They also document that this trend cannot easily be explained by changes in the sample composition, changes in the asymmetric timeliness of earnings or by industry trends. Their main explanation for the finding is the increase of non-timing related accrual recognition and the increasing frequency of loss years. 
+
+Our workflow consists of the following four steps. 
+
+(i) REPLICATION (same specification, same population, same sample): 
+We reproduce the sample and key variables of BLZ and replicate their main findings. 
+(ii) ROBUSTNESS TESTING (same specification, same population, split original sample into subsamples):
+We assess the overall robustness of the main finding by re-running the original model specification on different subsamples. We partition the original sample based on key variables of interest in order to assess robustness of the main findings across subsamples (e.g., across firm-size deciles, industries, etc.). 
+(iii) EXPLORATION (different specifications, same population, same sample):
+Having assessed the robustness of the finding we revisit the explanations offered by BLZ. By using different model specifications and state of the art tools for data visualization we offer additional insights into the driving forces behind the diminishing cash flow-accrual association.
+(iv) EXTENSION (different specifications, different population, different sample):
+Finally, we analyze the extent to which the key findings of BLZ are generalizable to different populations of firms by using an international sample of firms. For this purpose, we show how ExPanD (i.e., our interactive toolbox) can be used to easily replicate the key findings of BLZ out-of-sample for the other countries of our world-wide ssample. Furthermore, we also test to what extent the change of the accrual/cash flow assocation in the international sample can be explained by our identified drivers. 
+
+Our findings highlight the benefits of applying this workflow for the replication and extension of empirical archival studies. We successfully replicate a current and prominent financial accounting study, show that its main finding is robust across industries and for small and large firms. Our exploration reveals that the distribution of operating cash flows is changing significantly over time and appears to be a major explanation for the paradigm shift in the accrual/cash flow relationship. This change in the cash flow distribution and the diminishing accrual/cash flow association is also observable for the international sample and the associated time-trend is surprisingly robust across countries.
+
+A concurrent working paper which also builds on the findings of BLZ is @NSV. The authors investigate whether the changing accrual/cash flow relationship affects the predictability of future cash flows. Interestingly, they find that the explanatory power of operating cash flows (to predict future operating cash flows) increases over time. They observe that the explanatory power of operating cash flows is associated with "decreasing operating cycles, decreasing working capital and increasing intangible intensity". They show that these results (and those of BLZ) generalize to an international sample of firms. While @NSV eplxore the effect of BLZ's findings on the predictive power of operating cash flows and accruals, we focus our extension on understanding the drivers of the deminsihing association between accruals and cash flows better.
+
+Our key data set underlying our extension is available for user-side exploration online ([click here to ExPanD](https://jgassen.shinyapps.io/ExpAcc)). Furthermore, the code used to generate our results and this paper is publicly available on Github. By applying this open science workflow for replicating and extending prior studies we enable researchers to build on our findings and to continue exploring the landscape of accrual accounting. Readers who have access to national and international Compustat data via the WRDS interface should be able to reproduce all of our findings easily by following the replication steps detailed in the Appendix.
+
+In addition, we provide a tool that reduces the costs associated with future replication studies: The interactive panel data exploration toolbox ExPanD facilitates systematic data exploration and robustness checking in a web-based environment. The code for ExPanD has been developed with the objectives of accessibility and re-usability in mind and is available as a separate R package (["ExPanDaR"](https://github.com/joachim-gassen/ExPanDaR)). It can be easily applied to other panel data sets.
+
+\pagebreak
+
+# Replication of @BLZ
+
+We choose whith BLZ s study for our replication that (i) provides an important finding, which is broad in its scope and substantially influences future financial accounting research, (ii) is exploratory in nature and raises related research questions that we might be able to address by further data explorations within-sample or out-of-sample and (iii) which facilitates replication (e.g., publicly available data, rigorous documentation of data collection, sample selection and research design). 
+
+BLZ document that the negative association between accruals and concurrent cash flows decreased substantially over time and virtually disappeared in recent years. This finding is extremely relevant for our field as the properties of accruals are key drivers of established measures for earnings quality and earnings management (e.g., @J, @D, @DD, @DGS for an overview). As the authors indicate in their study, work that is using such measures might be picking up overall time trends when designing tests (partially) relying on the time dimension for identification such as difference-in-differences designs. Given that the common trend assumption is critical for these designs, a key research question of @BLZ (and in some regard also of our study) is the identification of cross-sectional variation that helps to explain this striking time-series pattern.
+
+Another reason why the findings of @BLZ are a good candidate for exploration and extensions is the magnitude of the additional tests and extensions that the authors themselves provide. To some extent, the study of @BLZ can itself be classified as exploratory. By using visual exploration tools in our study, we can make the fascinating findings of @BLZ more accessible to the reader, potentially allowing future work to chart the accrual landscape at an even higher level of detail.
+
+We start the replication by reproducing the sample of BLZ, thereby following the sample selection steps and the variable definitions of BLZ as closely as possible. First, we create a `r format(file.info("data/cstat_us_sample.RDS")$mtime, "%B %d, %Y")` dump of the Compustat US North America fundamentals data base with standard screens. Second, we generate the variables used in BLZ by following their definitions (`r t_ref("tab_vd")` shows our resulting variable definitions). We translate currency values denominated in foreign currencies to US-\$.  
+
+\pagebreak
+
+```{r variable_definitions, cache=TRUE, fig.align = "center", echo=FALSE, results="asis", fig.cap=tab_vd}
+vd <- readRDS("raw_data/blz_var_definitions.RDS")
+vt <- data.frame(Variable=vd$var_name, Definition=vd$var_def)
+vt <- vt[c(7:12, 6, 5, 13, 14),]
+kable(vt, format = "latex", 
+      row.names = FALSE, booktabs = TRUE, linesep = "") -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+latex_tab <- c("\\begin{table}[!htbp]",
+               "\\centering",
+               "\\begin{threeparttable}",
+               lat_tab[2:length(lat_tab)],
+               "\\begin{tablenotes}[flushleft]",
+               "\\setlength{\\labelsep}{0pt}",
+               "\\footnotetext",
+               "\\item Note: The variable defintions follow BLZ, p. 75 f. All data and data mnemonics are from Compustat.",
+               "\\end{tablenotes}",
+               "\\end{threeparttable}",
+               "\\end{table}")
+cat(paste(latex_tab, collapse = "\n"))  
+```
+\noindent \textit{`r table_nums("tab_vd")`}
+
+Third, we apply the additional sample screens and the by-year winsorizing procedure described in BLZ, p.49f. This means that we delete observations from the financial services industry, observations from years with significant mergers/acquisitions activity and observations with missing cash flow or accrual data. In addition, we limit the sample to the periods 1964 to 2014. We refer the resulting sample as the replicated sample. Its descriptive statistics are displayed in `r t_ref("tab_ds_rs")`.
+
+```{r descriptives_rs, cache = TRUE, echo = FALSE, results="asis", fig.cap=tab_ds_rs}
+t <- prepare_descriptive_table(rep_sample[, c("e", "tacc", "lagcfo", 
+                                             "cfo", "leadcfo", "mv", 
+                                             "bm", "sgaint")])
+kable(t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
+      format.args = list(decimal.mark = ".", big.mark = ",", 
+                         scientific=FALSE),
+      booktabs = TRUE, linesep = "") -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+latex_tab <- c("\\begin{table}[!htbp]",  
+               "\\begin{threeparttable}",
+               lat_tab[2:length(lat_tab)],
+               "\\begin{tablenotes}[flushleft]",
+               "\\setlength{\\labelsep}{0pt}",
+               "\\footnotetext",
+               paste0("\\item Note: This replicated sample is based on a Compustat North America dump and the screens as reported by BLZ, p. 49f. Variables are as defined in ", t_ref("tab_vd"), "."),
+               "\\end{tablenotes}",
+               "\\end{threeparttable}",
+               "\\end{table}")
+cat(paste(latex_tab, collapse = "\n"))  
+```
+\noindent \textit{`r table_nums("tab_ds_rs")`}
+
+For reference, `r f_ref("fig_blz_ds")` displays the descriptive statics of the original BLZ sample as presented in Panel A of BLZ's Table 1. We note several differences between the sample of BLZ and our sample. First, our sample is larger then the sample of BLZ (`r format(length(rep_sample$cfo), big.mark = ",") ` versus 217,164 observations of BLZ). Second, firms in our sample seem to be significantly smaller than the firms of BLZ (mean market value in replicated sample M US-\$ `r format(mean(rep_sample$mv, na.rm=TRUE), big.mark = ",", digits = 3)` versus 2,139 of BLZ).
+
+\noindent 
+```{r, echo = FALSE, out.height = "6cm", fig.align="center"}
+include_graphics("../media/blz_table_1_panel_a.jpg")
+```
+\noindent \textit{`r figure_nums("fig_blz_ds")`}
+
+We assume that our initial Compustat data screens differ from the screens that BLZ applied, as our sample appears to include additional firms that tend to be relative small in terms of the market value. In order to make our sample more comparable to the one used in BLZ we apply an additional screen and exclude firms with average total assets below M US-\$ 7.5 from our sample (prior to winsorizing the data). We label the resulting sample as the test sample. `r t_ref("tab_ds_ts")` reports its descriptive statistics.
+
+```{r descriptives_ts, cache = TRUE, echo = FALSE, results="asis", fig.cap=tab_ds_ts}
+
+t <- prepare_descriptive_table(test_sample[, c("e", "tacc", "lagcfo", 
+                                               "cfo", "leadcfo", "mv", 
+                                               "bm", "sgaint")])
+
+kable(t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
+      format.args = list(decimal.mark = ".", big.mark = ",", 
+                         scientific=FALSE),
+      booktabs = TRUE, linesep = "") -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+latex_tab <- c("\\begin{table}[!htbp]",  
+               "\\begin{threeparttable}",
+               lat_tab[2:length(lat_tab)],
+               "\\begin{tablenotes}[flushleft]",
+               "\\setlength{\\labelsep}{0pt}",
+               "\\footnotetext",
+               paste0("\\item Note: The test sample is based on the replicated sample reported in ", t_ref("tab_ds_rs"), ". In addition, observations with $avg\\_at$ below M US-\\$ 7.5 are excluded. Variables are as defined in ", t_ref("tab_vd"), "."),
+               "\\end{tablenotes}",
+               "\\end{threeparttable}",
+               "\\end{table}")
+cat(paste(latex_tab, collapse = "\n"))  
+
+```
+\noindent \textit{`r table_nums("tab_ds_ts")`}
+
+After applying this additional screen, our sample appears to be reasonably close, both in terms of sample size and descriptive statistics, to the BLZ sample presented in Figure 1. The only noteworthy exemption is that the extreme values of TACC presented by BLZ (Minimum -1.717 and Maximum 1.249) are substantially larger compared to the extreme values presented in our test sample (Minimum `r format(min(test_sample$tacc), digits = 3)` and Maximum `r format(max(test_sample$tacc), digits = 3)`).
+
+Despite these remaining differences, we continue by replicating the main finding of BLZ. Therefore, we estimate yearly regressions of the following model:
+
+\begin{equation}
+\label{level_reg}
+TACC = \beta_0 + \beta_1 CFO + \epsilon
+\end{equation}
+
+`r f_ref("fig_level_results")` presents the $\beta_0$ coefficient over time along with the original coefficients reported in Table 2 of BLZ.
+
+\noindent
+```{r fig_level_results, cache = TRUE, echo = FALSE, out.width="90%"}
+prepare_fig_level_results(test_sample)
+```
+\noindent \textit{`r figure_nums("fig_level_results")`}
+
+Figure 2 shows that our results are very similar to the key result reported in Table 2 of BLZ. In both cases, we observe a steady increase in the beta coefficient over time, which indicates that the cash flow-accrual association weakens over time. Furthermore, our results in terms of the adjusted R² mirror the findings of BLZ and illustrate the drastic decline in the correlation between accruals and cash flows over time. Our successful replication of the key BLZ findings provides us with confidence that our test sample is close enough to the original sample of BLZ. Thus, we proceed by assessing the overall robustness of the BLZ finding.
+
+# Robustness
+
+We partition our test sample in order to assess the robustness of the main BLZ finding across subsamples. We are particularly interested whether the diminishing accrual/cash flow relation is observable (i) across industries, (ii) for small as well as large firms and (iii) for firm-year observations with a low and a high magnitude of operating cash flows. 
+
+For each subsample, we re-run the yearly regressions based on model 1. In the second step, we use the generated beta coefficients (or adjusted R²) and regress them on the variable $Time$ (coded as year-1964): 
+
+\begin{equation}
+\label{time_reg}
+\beta_1(CFO) [Adj. R^2]= b_0 +b_1 Time +\epsilon
+\end{equation}
+
+The values for $b_1$ are plotted for the different subsamples. A larger $b_1$ illustrates a more pronounced decline of the accrual/cash flow association over time for the respective subsample. 
+
+When sub-sampling by firm size, we use average total assets but adjust the value for inflation by using the consumer price index as provided the U.S. Department of Labor. We use December 2014 as our indexing period. When subsampling by industry, we plot all industries that, according to the Fama/French 48 industries classification, have at least 10 observations for all years in the period 1964-2014.
+ 
+\noindent
+``` {r fig_level_by_at, cache = TRUE, echo = FALSE}
+prepare_fig_level_by_at(test_sample, "cfo")
+```
+\noindent \textit{`r figure_nums("fig_level_by_at")`}
+
+As illustrated in `r f_ref("fig_level_by_at")`, the time trend documented by BLZ manifests itself across all size groups but appears somewhat smaller for larger firms. BLZ already indicate that the diminishing association between cash flows and accruals is more pronounced for loss firms. As small firms are also more frequently reporting losses, our observations is well in line with the observations of BLZ. Next we turn to exploring the time trends across industries. 
+
+\noindent
+``` {r fig_level_by_ind, cache = TRUE, echo = FALSE}
+prepare_fig_level_by_ind(test_sample, "cfo")
+```
+\noindent \textit{`r figure_nums("fig_level_by_ind")`}
+
+Also in line with BLZ, we document that the time trend can be observed across virtually all industries. There does not appear to be an obvious systematic variation across industries. Finally, we plot the model coefficients across deciles of $CFO$, the independent variable of the model (\ref{level_reg}). 
+
+\noindent
+``` {r fig_level_by_cfo, cache = TRUE, echo = FALSE}
+prepare_fig_level_by_cfo(test_sample, "cfo")
+```
+\noindent \textit{`r figure_nums("fig_level_by_cfo")`}
+
+`r f_ref("fig_level_by_cfo")` shows that the time trend (of the diminishing accrual/cash flow association) is strongly moderated by the magnitude of operating cash flows. BLZ already show that the relationship between accruals and cash flows is weaker in years for which a higher fraction of firms report losses. However, we prefer to partition our subsample based on cash flows (rather than earnings) as they are not influenced by the dependent variable of model (\ref{level_reg}). We next explore whether the time trend with respect to the adjusted R² of model (\ref{level_reg}) varies systematically across subsamples with different operating cash flows. `r f_ref("fig_level_by_cfo_r2")` communicates the result.
+
+\noindent
+``` {r fig_level_by_cfo_r2, cache = TRUE, echo = FALSE}
+prepare_fig_level_by_cfo(test_sample, "adjr2")
+```
+\noindent \textit{`r figure_nums("fig_level_by_cfo_r2")`}
+
+This pattern is striking as it indicates that the drastic drop in $Adj. R^2$ described in BLZ seems to be driven by negative and extreme cash flow observations. To explore this fact a little bit further, `r f_ref("fig_level_by_cfo_comp")` plots the time trends separately for firms within the first, fifth and tenth decile of $CFO$. It becomes apparent from the plot that the explanatory power of cash flows for accruals tends to lie in the extremes. Given that the bins at the extreme deciles are wider this is not entirely surprising. What seems more relevant is that the coefficient trend differs clearly across the extremes. For the subsample with particularly low cash flows the negative association between accruals and cash flows clearly diminishes at the end of the sample period. In contrast, for firms with particularly high cash flows, the association seems to be more persistent (positive R² and negative coefficient throughout the sample period). 
+
+\noindent
+``` {r fig_level_by_cfo_comp, cache = TRUE, echo = FALSE}
+prepare_fig_level_comp(test_sample, "cfo")
+```
+\noindent \textit{`r figure_nums("fig_level_by_cfo_comp")`}
+
+While we observe a negative association between cash flows and accruals for all subsamples at the beginning of the sample period, the association becomes positive for the low cash flow subsample and remains negative for the high cash flow subsample. This might indicate a change in the functional form of the association between cash flows and accruals. 
+
+The functional form of the cash flow-accrual relation has also been investigated by BLZ to some extent by exploring asymmetric timeliness variants of model (\ref{level_reg}) in sprit of @BS. However, BLZ do not explore varying functional forms of the association between cash flows and accruals as a main driver of the overall time trend. We will pursue this avenue in the next section.
+
+\pagebreak
+
+# Exploration
+
+To explore the development of the functional relation of cash flows from operations and total accruals over time, we estimate locally estimated smooth regressions for yearly samples. The result can be visualized by a video ([click here to see video](https://www.dropbox.com/s/66cscjo8fcadhwa/test_samplecfo_tacc_scatter.mp4?dl=1)) or by comparing the functional forms across two samples, one spanning the beginning of the sample period (1964-1973) and one spanning the end of the sample period (2005-2014).
+
+\noindent
+``` {r fig_scatter_sbs, cache = TRUE, echo=FALSE}
+prepare_fig_scatter_sbs(test_sample)
+```
+\noindent \textit{`r figure_nums("fig_scatter_sbs")`}
+
+`r f_ref("fig_scatter_sbs")` and the video display a stark contrast in the estimated functional form. For the beginning of the sample period the relation is almost perfectly linear. However, towards the end of the sample period the relation is highly non-linear, exhibiting a kinked regression curve very much in line with the idea of asymmetric timeliness of accruals as suggested by @BS. Note that the strong difference in the functional forms across periods is not driven by an increasing sample size, as we plot 20,000 observations for each period. 
+
+The change in the functional form is mainly driven by two types of firm-year observations that were not observable in the early sample periods: (i) observations with extremely low operating cash flows (ii) firm-year observations with moderate levels of operating cash flows but particularly low accruals. This results in a positive (negative) accrual/cash flow association for firm-year observations with negative (positive) cash flows towards the end of the sample period. Again, this finding is in line with `r f_ref("fig_level_by_cfo_comp")`, which indicated that the accrual/cash flow association is strongly moderated by the magnitude of operating cash flows. 
+
+What also becomes apparent is that the distribution of cash flows and accruals becomes more dispersed towards the end of the sample period. To visualize the change in the distribution of operating cash flows, we estimate kernel density estimators, again both for the beginning and the end of sample period and contrast these estimators in `r f_ref("fig_cfo_density_sbs")`.
+
+\noindent
+``` {r fig_cfo_density_sbs, cache = TRUE, echo=FALSE}
+prepare_fig_cfo_density_sbs(test_sample)
+```
+\noindent \textit{`r figure_nums("fig_cfo_density_sbs")`}
+
+Towards the end of the sample period the distribution of cash flow from operations becomes significantly more dispersed, more left skewed and more leptokurtic. Particularly, the increase of relatively large negative cash flows over time is striking and likely to be influential for the observed change in functional form. Thus, we proceed by assessing the influence of this change in the cash flow distribution on the findings of BLZ. 
+
+BLZ already explore whether an increase in cash flow shocks over time might explain the attenuation of the accrual/cash flow association, but do not find that it significantly contributes to the effect (Table 4 of BLZ). However, due to the observable change in the functional form we would like to explore the impact of the changing cash flow distribution in more detail. 
+
+Similar to model (\ref{time_reg}), we use the yearly beta coefficients (or adjusted R²) from model (\ref{level_reg}) as our dependent variable and regress them on $Time$ (Year-1964) as well as on one or multiple of the following distributional properties of the operating cash flow, which we determine annually for the cross-section: mean ($cfo\_mean$), standard deviation ($cfo\_sd$), distance between maximum and minimum ($cfo\_range$), skewness ($cfo\_skew$) and kurtosis ($cfo\_kurt$). For instance, ($cfo\_range$) captures the distance between the lowest and highest  $cfo$ within our sample for that year (keep in mind that we scale cash flow from operations by average total assets and winsorize the variable by year in order to generate $cfo$). 
+
+\begin{equation}
+\begin{aligned}
+\label{full_cfo_reg}
+\beta_1(CFO) [Adj. R^2] = &b_0 +b_1Time + b_2cfo\_mean + b_3cfo\_sd + b_4cfo\_range + \\ 
+&b_5cfo\_skew + b_6cfo\_kurt +\epsilon
+\end{aligned}
+\end{equation}
+
+In addition, we are interested in whether $Time$ explains any remaining variance after controlling for changes in the underlying cash flow distribution. For this reason, we regress the residual variance (after controlling for the moments of the cash flow distribution but not time) on $time$.  
+
+\begin{equation}
+\label{resid_cfo_reg}
+resid\_cfo [resid\_adjr2]= b_0 +b_1 Time +\epsilon
+\end{equation}
+ 
+The results in `r t_ref("tab_dist_tests_cfo")` and `r t_ref("tab_dist_tests_adjr2")` indicate that a large part of the diminishing accrual/cash flow association can be explained by changes in the underlying cash flow distribution. In particular, it appears that the association between accruals and operating cash flows weakens as the cash flow distribution becomes more dispersed (both in terms of the standard deviation and more pronounced tails) and more left-skewed (more observiations with particularly negative cash flows).
+\pagebreak
+\noindent
+
+
+``` {r tab_dist_tests_cfo, echo=FALSE, cache = TRUE, results="asis"}
+ys <- prepare_us_yearly_sample(test_sample)
+dist_test <- prepare_tab_impact_cfo_dist_us(ys)
+dist_test[[1]]$table[12] <- "\\\\[-1.8ex] & cfo\\_est & cfo\\_est & cfo\\_est & cfo\\_est & cfo\\_est & cfo\\_est & cfo\\_est & resid\\_cfo \\\\ "
+latex_tab <- c("\\begin{table}[!htbp]",  
+               "\\small",
+               "\\begin{threeparttable}",
+               "\\setlength{\\tabcolsep}{2pt}",
+               "\\begin{tabular}{lcccccccc}",
+               dist_test[[1]]$table[8:49],
+               "\\end{tabular}",
+               "\\begin{tablenotes}[flushleft]",
+               "\\setlength{\\labelsep}{0pt}",
+               "\\footnotetext",
+               "\\item Note: This table reports OLS regression results for the respective variants of model 3 (columns 1-7) and model 4 (column 8). The dependent variable in these columns 1-7 is the annual $b_1$ coefficient of model 1. In column 8, the dependent variable is the residual of a variant of model (3) including all $cfo$ moments but not $time$. For the independent variables the identifiers after the underscore indicate the repspective moment of the annual $cfo$ distribution. $time$ is a yearly indicator $= Year - 1964$. For the full model in column 7, variance inflation factors are reported in square brackets below the standard errors, which are reported in parantheses. $^{*}$/$^{**}$/$^{***}$ indicate two-sided significane levels of 10/5/1 \\%, respectively.",
+               "\\end{tablenotes}",
+               "\\end{threeparttable}",
+               "\\end{table}")
+
+cat(paste(latex_tab, collapse = "\n"))
+```
+\noindent \textit{`r table_nums("tab_dist_tests_cfo")`}
+
+\pagebreak
+\noindent
+``` {r tab_dist_tests_adjr2, echo=FALSE, cache = TRUE, results="asis"}
+dist_test[[2]]$table[12] <- "\\\\[-1.8ex] & adjr2 & adjr2 & adjr2 & adjr2 & adjr2 & adjr2 & adjr2 & resid\\_adjr2 \\\\ "
+latex_tab <- c("\\begin{table}[!htbp]",  
+               "\\small",
+               "\\begin{threeparttable}",
+               "\\setlength{\\tabcolsep}{2pt}",
+               "\\begin{tabular}{lcccccccc}",
+               dist_test[[2]]$table[8:49],
+               "\\end{tabular}",
+               "\\begin{tablenotes}[flushleft]",
+               "\\setlength{\\labelsep}{0pt}",
+               "\\footnotetext",
+               "\\item Note: This table reports OLS regression results for the respective variants of model 3 (columns 1-7) and model 4 (column 8). The dependent variable in these columns 1-7 is the annual $adjr2$ coefficient of model 1. In column 8, the dependent variable is the residual of a variant of model (3) including all $cfo$ moments but not $time$. For the independent variables the identifiers after the underscore indicate the repspective moment of the annual $cfo$ distribution. $time$ is a yearly indicator $= Year - 1964$. For the full model in column 7, variance inflation factors are reported in square brackets below the standard errors, which are reported in parantheses. $^{*}$/$^{**}$/$^{***}$ indicate two-sided significane levels of 10/5/1 \\%, respectively.",
+               "\\end{tablenotes}",
+               "\\end{threeparttable}",
+               "\\end{table}")
+cat(paste(latex_tab, collapse = "\n"))
+```
+\noindent \textit{`r table_nums("tab_dist_tests_adjr2")`}
+
+After controlling for changes in the cash flow distribution, time is no longer significantly associated with 
+the residual variance in $Adj. R^2$ and $b_1$ (see column 8 of `r t_ref("tab_dist_tests_cfo")` and `r t_ref("tab_dist_tests_adjr2")` which are based on model (\ref{resid_cfo_reg}). It has to be stated, however, that this test is very aggressive as it tests for explanatory power of time subsequent to testing for the explanatory power of the changing properties of the cash flow distribution. The results in column 7 illustrate that in models where time is being included as an explanatory variable concurrently with the distributional properties of operating cash flow, the time dimension maintains its significance, albeit with exceptionally high variance inflation factors.
+
+\noindent
+``` {r tab_corr_yearly_us_sample, echo=FALSE, cache = TRUE, results="asis"}
+tab <- prepare_correlation_table(ys[,c(1:8, 12, 15:19)], format = "latex", booktabs = TRUE, linesep = "")
+tab$kable_ret <- gsub("%", "\\\\%", tab$kable_ret)
+tab$kable_ret <- gsub("_", "\\\\_", tab$kable_ret)
+lat_tab <- unlist(strsplit(tab$kable_ret, "\n"))
+latex_tab <- c("\\begin{table}[!htbp]",  
+               "\\small",
+               "\\begin{threeparttable}",
+               "\\setlength{\\tabcolsep}{5pt}",
+               lat_tab[3:21],
+               "\\begin{tablenotes}[flushleft]",
+               "\\setlength{\\labelsep}{0pt}",
+               "\\footnotetext",
+               lat_tab[24:26],
+               "\\end{table}")
+cat(paste(latex_tab, collapse = "\n"))               
+```
+\noindent \textit{`r table_nums("tab_corr_yearly_us_sample")`}
+
+A look at the correlation coefficients in `r t_ref("tab_corr_yearly_us_sample")` reveals that $time$ is highly correlated with the properties of the cash flow distribution. For instance, the pearson correlation coefficient for $time$ and $cfo\_sd$ is `r format(cor(ys$time, ys$cfo_sd), digits = 2)`. This might explain why BLZ do not find a significant impact of the standard deviation of cash flows on the accrual/cash flow association (see Table 4 of BLZ). Given these strong correlations and the resulting high variance inflation factors in columns 7 of `r t_ref("tab_dist_tests_cfo")` and `r t_ref("tab_dist_tests_adjr2")`, it is statistically virtually impossible to separate a general time effect from the change in the cash flow distribution within a sample of 51 annual observations.
+
+# Extension
+
+In order to explore whether the diminishing accrual/cash flow association is observable for firms outside of the US, we use an international sample of firms obtained from Compustat Global. We apply the original BLZ screens, but not our additional size screen, in order to generate the international sample. In addition, we do not drop firm-year observations with significant acquisition activity, given that the Compustat item (# aqs) is not available internationally. As original cash flow data is sparce in the early years of the international data, we relace original cash flow and accruals data with balance sheet based measures whenever original cash flow data are not observabe. To be included in our international country-year sample, we require (i) each country-year to have at least 30 firm-year observations and after applying this filter (ii) each country to have at least 20 country-years. For country-years with at least (less) than 100 firm-years we winsorize the extreme 1% (5%) observations on either side for each of our continuous variables. The resulting sample period spans from `r format(min(int_test_sample$year))` to `r format(max(int_test_sample$year))`. 
+
+\noindent
+```{r tab_world_sample, cache = TRUE, echo = FALSE, results = "asis"}
+ctr_year_sample <- prepare_int_yearly_sample(all20_ctry_sample)
+time_effects <- estimate_int_time_effect(ctr_year_sample)
+kable(all20_ctry, format = "latex", booktabs = T, linesep = "",
+      format.args = list(decimal.mark = ".", big.mark = ",", 
+                         scientific=FALSE)) -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+latex_tab <- c("\\begin{table}[!htbp]",  
+               "\\centering",
+               "\\small",
+               "\\begin{threeparttable}",
+               "\\setlength{\\tabcolsep}{4pt}",
+               lat_tab[2:31],
+               "\\midrule",
+               paste0("Total & & ", 
+                      format(nrow(ctr_year_sample), big.mark = ","), 
+                      " & ", 
+                      format(nrow(all20_ctry_sample), big.mark = ","), 
+                      "\\\\"),
+               "\\bottomrule",
+               "\\end{tabular}", 
+               "\\begin{tablenotes}[flushleft]",
+               "\\setlength{\\labelsep}{0pt}",
+               "\\footnotetext",
+               "\\item Note: Country year sample for international analyes. All countries with at least 20 years of data are included. A minimum of 30 firm-year observations is required to estimate the sample statistics for each country year to be included in this sample.",
+               "\\end{tablenotes}",
+               "\\end{threeparttable}",
+               "\\end{table}")
+cat(paste(latex_tab, collapse = "\n"))               
+```
+\noindent \textit{`r table_nums("tab_world_sample")`}
+
+`r t_ref("tab_world_sample")` shows the distribution of our test sample across countries. In a first step, we examine the extent to which the diminishing accrual/cash flow association represents an international phenomenon. For this reason, we re-run model (\ref{time_reg}) and plot the respective time coefficient in the upper graph of the following two figures. A higher (lower) coefficient in `r f_ref("fig_time_effect_cfo_world_sbs")` (`r f_ref("fig_time_effect_adjr2_world_sbs")`) indicates a more pronounced decline of the association between accruals and cash flows over time. The figures illustrate that the diminishing accrual/cash flow association is indeed an international phenomenon. In the majority of countries the time-trend is even more pronounced than in the US. However, it has to be noted that, as can be assessed by `r f_ref("fig_level_results")`, the trend in the U.S. is most prominent in the period prior to 1989. 
+
+The two figures also show the $time$ coefficient obtained from re-running model (\ref{full_cfo_reg}) (see $full\_cfo$ graphs in the middle of the figures) and model (\ref{resid_cfo_reg}) (see $resid\_cfo$ graphs at the bottom of the figures) on the international sample. Similar to the results for the US sample, we find that for the majority of countries the coefficient on $time$ remains positive and significant when we control for changes in the underlying cash flow distribution. However, $time$ does not seem to explain a large part of the residual variance of the accrual/cash flow association after controlling for changes distributional properties of operating cash flows. `r t_ref("tab_tests_world")` provides the results for the same test based on the pooled sample and controlling for country fixed-effects. The results are somewhat weaker compared to the U.S. sample. However, they still indicate that the accrual/cash flow association weakens substantially in years where standard deviation of observable cash flows increases. The time trend remains significant although its magnitude decreases substantially after controlling for the underlying cash flow distribution. 
+
+\noindent
+``` {r fig_time_effect_cfo_world_sbs, fig.height = 8, cache = TRUE, echo=FALSE}
+prepare_fig_time_effect_sbs(time_effects, "cfo")
+```
+\noindent \textit{`r figure_nums("fig_time_effect_cfo_world_sbs")`}
+
+\noindent
+``` {r fig_time_effect_adjr2_world_sbs, fig.height = 8, cache = TRUE, echo=FALSE}
+prepare_fig_time_effect_sbs(time_effects, "adjr2")
+```
+\noindent \textit{`r figure_nums("fig_time_effect_adjr2_world_sbs")`}
+
+\pagebreak
+\noindent
+\renewcommand{\topfraction}{.95}
+``` {r tab_tests_world, echo=FALSE, cache = TRUE, results="asis"}
+tab_tests_world <- prepare_tab_impact_cfo_dist_int(ctr_year_sample)
+tab_tests_world$table[12] <- "\\\\[-1.8ex] & cfo\\_est & resid\\_cfo & adjr2 & resid\\_adjr2 \\\\ "
+latex_tab <- c("\\begin{table}[!htbp]",
+               "\\small",
+               "\\begin{threeparttable}",
+               "\\setlength{\\tabcolsep}{18pt}",
+               "\\begin{tabular}{lcccccccc}",
+               tab_tests_world$table[8:46],
+               "\\end{tabular}",
+               "\\begin{tablenotes}[flushleft]",
+               "\\setlength{\\labelsep}{0pt}",
+               "\\footnotetext",
+               "\\item Note: This table reports OLS regression results of running model 3 (columns 1 and 3) for the interantional sample. The dependent variable in these two columns is the $b_1$ and $adjr2$ from the yearly regressions of model 1. Columns 2 and 4 report the results for model 4. The dependent variable in columns 2 and 4 is the residual of a variant of model (3) including all $cfo$ moments but not $time$. The identifiers after the underscore indicate the repspective moment of the annual $cfo$ distribution. $time$ is a yearly indicator $= Year - 1989$. Variance inflation factors are reported in square brackets below the standard errors, which are clustered by country. $^{*}$/$^{**}$/$^{***}$ indicate two-sided significance levels of 10/5/1 \\%, respectively.",
+               "\\end{tablenotes}",
+               "\\end{threeparttable}",
+               "\\end{table}")
+cat(paste(latex_tab, collapse = "\n"))
+```
+\noindent \textit{`r table_nums("tab_tests_world")`}
+\pagebreak
+
+The plots in `r f_ref("fig_yfe_residcfo_world_sbs")` and `r f_ref("fig_yfe_residadjr2_world_sbs")` show the development of the residual variance of the accrual/cash flow association (i.e., the dependent variable of model (\ref{resid_cfo_reg})) over time. After controlling for changes in the underlying cash flow distribution it appears that the decline of the accrual/cash flow association over time seems to be driven by the nineties and experiences a peak during the first dotcom crisis around 2001. As can be assessed via the ExPanD tool ([click here to ExPanD](https://jgassen.shinyapps.io/ExpAcc)), this time trend seems to be reasonable robust across countries.
+  
+  
+\noindent
+``` {r fig_yfe_residcfo_world_sbs, fig.height = 3, cache = TRUE, echo=FALSE}
+prepare_fig_yearly_fixed_effects(ctr_year_sample, "resid_cfo")
+```
+\noindent \textit{`r figure_nums("fig_yfe_residcfo_world_sbs")`}
+
+\noindent
+``` {r fig_yfe_residadjr2_world_sbs, fig.height = 3, cache = TRUE, echo=FALSE}
+prepare_fig_yearly_fixed_effects(ctr_year_sample, "resid_adjr2")
+```
+\noindent \textit{`r figure_nums("fig_yfe_residadjr2_world_sbs")`}
+
+# Conclusion
+
+In this research note, we showcased an open science workflow by replicating and extending the findings of @BLZ. This provides a prime example for the importance of replications. During each of our four stages (replication, robustness testing, exploration, extension) we were able to generate relevant insights that help us to better understand the accrual landscape.
+
+In particular, we successfully replicated an influential financial accounting study and showed the robustness of its key finding across industries and countries. We found that this world-wide decline can largely be explained by a change in the underlying cash flow distribution over time. Towards the end of our sample period operating cash flows become significantly more dispersed and we observe a higher proportion of firm-years with strongly negative cash flows. For these firm-years the association between accruals and cash flows is positive, which appears to be the main explanation for the findings of BLZ. Besides this effect, which we assess to explain about 80 % of the phenomenon reported by BLZ, we document a remaining time-trend that is remarkably stable around the world. 
+
+These two observations triger two follow-up questions: What explains this world-wide trend and what are the underlying drivers for the substantial change in the cash flow distribution over time? The latter question is of particular relevance, given that the change in the cash flow distribution is observable across countries and might bias studies that (implicitly) rely on time-trends. Potential reasons for the increasing dispersion of operating cash flows (and the higher proportion of particularly negative cash flows) could be the following:
+
+\noindent \textit{1)	Changes in sample demographics due to:} (i) an increasing frequency of early stage life cycle firms in recent years, (ii) a higher proportion of less profitable firms going public or (iii) a change in database coverage, which towards the end of the sample period might lead to an increase in the proportion of small, less profitable and liquidated firms.   
+
+\noindent \textit{2)	Changes in asset structure:} A decreasing accounting capital intensity of firms in recent years, which might have led to a shift from capital expenditures (which negatively affect CFI) to different cash outflows (which negatively affect CFO). In a similar vein, @SRI find the higher intangible intensity of recently listed firms to be a main contributor for the decline of earnings quality measures. 
+
+\noindent \textit{3)	Changes in the operating cycle:} Increases in the duration of the operating cycle might have led to more volatile cash flows. 
+
+We plan to explore these potential explanations further in future versions of this paper. Researchers interested in these issues are invited to directly build on our code and analyses by either re-running and extending our code which is available on Github (see Replication guide in the appendix) and/or by using our online panel data exploration tool ([click here to ExPanD](https://jgassen.shinyapps.io/ExpAcc)). 
+
+\pagebreak
+
+# Appendix: Replication Guide {-}
+
+To replicate this paper and its findings, you need admin access to computational resources (a PC running Windows or Linux as well as a Mac will do) and Compustat fundamental annual data, both national and international. For the following steps we assume that you have an active subscription to WRDS.
+
+1. Download the installer of the statistical package R for your system: https://cran.r-project.org/ 
+2. Install R to your system
+3. Download	RStudio:	https://www.rstudio.com/products/rstudio/download/
+4. After R has finished installing, install RStudio
+5. If you have a Github account, you can link RStudio to it (follow the instructions under http://happygitwithr.com/) and then fork the Github repository https://github.com/joachim-gassen/ExpAcc
+6. If you do not have a Github account (yet), download the ZIP-File containing the repository for this paper from https://github.com/joachim-gassen/ExpAcc and extract it on your computer
+7. Start RStudio. Use the file window (normally placed as a tab window in the lower right part of the screen) to navigate where you have stored the repository.
+8. In the "code" sub-directory, you will find a file named "fetch_wrds_data.R". Open it.
+9. The R code will open in the upper left corner of the screen. No worries if you never worked with R before. You only need to adjust a few things to adjust the code to your WRDS subscription. 
+10. For the following, you will find the instructions to get a WRDS connection running in RStudio under https://wrds-web.wharton.upenn.edu/wrds/support/Accessing%20and%20Manipulating%20the%20Data/_007R%20Programming/index.cfm. The instructions help you to install the SAS Drivers for JDBC (if not already installed) and the store your WRDS user credentials in a securely encrypted way.
+11. After following the guidance given on the WRDS web page and editing "fetch_wrds_data.R", you should be able to download the necessary data from WRDS by sourcing "fetch_wrds_data.R" (Ctrl + Shift + Enter). Congratulations!
+11. Open the file "replicate_paper.R". Run all (Ctrl + A, Ctrl + E). This will install necessary R pacakges, including the ExPanDaR package, generate all samples, tables and figures that are presented in the paper. In the end, it will open a local version of the ExPanD app that is also available online (https://jgassen.shinyapps.io/ExpAcc/).
+12. If you want to reproduce the whole paper, open the file ExpAcc_paper.Rmd in the paper directory and knit it (Ctrl + Shift + K, Icon in the tray above the text editor). Note: You will need to have some LaTeX distribution installed on your system for knit to produce PDF files.
+12. Where do we go from here? Well that depends. A good first step would be to explore and audit the code of the repository. It is contained in the code directory. The naming of the files should be somewhat self-explanatory. As an example for what to do: Experiment with the sample screens and the outlier treatment of the respective samples.
+13. If you stumble across something interesting, please get in touch. The most efficient way to do that would be to open up an issue on Github or to issue a pull request with your suggested changes. But we also cater to traditional email. Just reach out to gassen@wiwi.hu-berlin.de
+
+\pagebreak
+
+# References {-}
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+\noindent
