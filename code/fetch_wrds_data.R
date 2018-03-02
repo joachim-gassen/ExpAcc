@@ -1,22 +1,40 @@
+# (C) Joachim Gassen 2018, gassen@wiwi.hu-berlin.de,see LICENSE file for details 
+#
+# This code pulls north-american and international compustat data from WRDS 
+# for the paper
+#
+# Exploring the Accrual Landscape:
+# A Note on the Usefulness of Open Science for Empirical Archival Research
+#
+# Martin Bierey and Joachim Gassen
+#
+# Make sure that you set your working directory ("setwd()") to the parent directory
+# of where this file is before sourcing this file.
+#
+
 rm(list = ls())
 
-library(rJava)
+source("code/utils.R")
+
+### Installing packages (if not already installed) and attaching them 
+
+pkgs <- c("rJava", "RJDBC", "Hmisc")
+
+invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
+
 options(java.parameters = '-Xmx4g')
-library(RJDBC)
-library(Hmisc)
-library(plyr)
 
 ### ------------------------- Start editing here -----------------------------------------------------
 
 # Here you need to enter your personal WRDS data
-# Refer to https://research-it.wharton.upenn.edu/news/working-with-wrds-data-directly-from-python-r-and-matlab/
+# Refer to https://wrds-web.wharton.upenn.edu/wrds/support/Accessing%20and%20Manipulating%20the%20Data/_007R%20Programming/index.cfm 
 # for guidance
 
 user <- "johndoe"
 pass <- "mygarbledpassword"
 
 # Make sure that the following points to where you stored the SAS Drivers for JDBC
-# Download them from https://wrds-web.wharton.upenn.edu/wrds/support/Accessing%20and%20Manipulating%20the%20Data/_007R%20Programming/index.cfm 
+# Download them from link provided by the website above.
 # if you do not have them installed. You only need the two mentioned files).
 # The orientation of the slash will be adjusted by the system so just leave it Unix style.
 
@@ -60,7 +78,7 @@ dyn_vars <- c("gvkey", "conm", "cik", "fyear", "datadate", "indfmt", "consol", "
 na_int_vars <- c("prcc_f", "mkvalt",  "csho", "aqs", "gdwlip", "wdp", "rcp", "cik", "curuscn", "dt") ## Variables that are not available for int sample
 new_int_vars <- c("dltt")
 
-dyn_vars_int <-c(mapvalues(dyn_vars[which(!dyn_vars %in% na_int_vars)], from=c("ni", "dvpd"), to=c("nicon", "dv")), new_int_vars)
+dyn_vars_int <-c(plyr::mapvalues(dyn_vars[which(!dyn_vars %in% na_int_vars)], from=c("ni", "dvpd"), to=c("nicon", "dv")), new_int_vars)
 
 us_wrds_dyn_var_str <- paste(dyn_vars, collapse = ", ")
 int_wrds_dyn_var_str <-paste(dyn_vars_int, collapse =", ")  

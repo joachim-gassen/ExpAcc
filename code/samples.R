@@ -8,7 +8,7 @@ read_cstat_us_raw_data <- function(rds_file) {
                     "conm", "cik", "fyear", "datadate", "indfmt", 
                     "consol", "popsrc", "datafmt", "curcd", 
                     "curuscn", "fyr", "csho", "exchg", "costat")
-  us <- readRDS(rds_file) %>%
+  us <- clear_labels(readRDS(rds_file)) %>%
     filter(indfmt == "INDL", fyear < 2017)
 
   us[us$curcd == "CAD", !(colnames(us) %in% non_cur_vars)] <- 
@@ -25,7 +25,7 @@ read_cstat_us_raw_data <- function(rds_file) {
   # There are two dup observations (006557, LAIDLAW INTERNATIONAL, 1982 1983) 
   # containing empty data for Canadian firms in USD
   us <- us[!duplicated(us[,c("gvkey", "fyear")]),]
-  return(clear_labels(us))
+  return(us)
 }
 
 
@@ -241,7 +241,6 @@ prepare_int_samples <- function() {
 
 
 prepare_int_yearly_sample <- function(is) {
-  is <- all20_ctry_sample
   is %>%
     group_by(country, year) %>%
     summarise(cfo_mean = mean(cfo),

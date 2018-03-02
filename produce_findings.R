@@ -6,6 +6,9 @@
 # A Note on the Usefulness of Open Science for Empirical Archival Research
 #
 # Martin Bierey and Joachim Gassen
+#
+# Make sure that you set your working directory ("setwd()") to 
+# where this file is before sourcing this file.
 
 rm (list=ls())
 
@@ -13,7 +16,6 @@ rm (list=ls())
 # and the iso3 country level name table (needs to be done at least once)
 
 refresh <- TRUE
-
 
 # Set the below to TRUE if you want repull Compustat data from WRDS 
 # This also needs to be done at least once and can also be done by running
@@ -25,28 +27,6 @@ refresh <- TRUE
 
 fetch_wrds_data <- FALSE
 
-
-### Installing packages (if not already installed) and attaching them 
-
-install_pkg_if_missing_and_attach <- function(pkg_string) {
-  lib_str <- strsplit(pkg_string, "/")[[1]][length(strsplit(pkg_string, "/")[[1]])]
-  if (!require(lib_str, character.only = TRUE)) {
-    if (!grepl("/", pkg_string)) install.packages(pkg_string)
-    else devtools::install_github(pkg_string)
-    library(lib_str, character.only = TRUE)
-  }
-} 
-
-pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe",
-          "tidyverse", "joachim-gassen/ExPanDaR",
-          "lubridate", "broom", "tweenr", "moments",
-          "Hmisc", "RCurl", "nteetor/gganimate")
-
-invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
-
-# Note: The dynamic title generation of the scatter videos
-# needs a forked version of gganimate
-
 ### The sourced files below contain functions 
 ### with the main code for the analyses
 
@@ -55,6 +35,18 @@ source("code/samples.R")
 source("code/tables.R")
 source("code/figures.R")
 source("code/videos.R")
+
+### Installing packages (if not already installed) and attaching them 
+
+pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe",
+          "dplyr", "tidyr", "joachim-gassen/ExPanDaR",
+          "lubridate", "broom", "tweenr", "moments",
+          "Hmisc", "RCurl", "nteetor/gganimate")
+
+invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
+
+# Note: The dynamic title generation of the scatter videos
+# needs a forked version of gganimate
 
 
 ### Generate samples

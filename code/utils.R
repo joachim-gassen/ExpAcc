@@ -3,6 +3,16 @@
 # This code contains utility functions needed to produce the findings of Bierey and Gassen  
 
 
+install_pkg_if_missing_and_attach <- function(pkg_string) {
+  lib_str <- strsplit(pkg_string, "/")[[1]][length(strsplit(pkg_string, "/")[[1]])]
+  if (!require(lib_str, character.only = TRUE)) {
+    if (!grepl("/", pkg_string)) install.packages(pkg_string)
+    else devtools::install_github(pkg_string)
+    library(lib_str, character.only = TRUE)
+  }
+} 
+
+
 clear_labels <- function(x) {
   if(is.list(x)) {
     for(i in 1 : length(x)) class(x[[i]]) <- setdiff(class(x[[i]]), 'labelled') 
