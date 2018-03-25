@@ -91,9 +91,10 @@ prepare_fig_yearly_fixed_effects(ctr_year_sample, "resid_adjr2")
 
 exp_abs_fname <- "paper/text_expand.txt"
 exp_abs <- readChar(exp_abs_fname, file.info(exp_abs_fname)$size)
+load("raw_data/ctr_year_sample_def.Rdata")
 config <- readRDS("raw_data/exp_acc_config.RDS")
 
-ExPanD(ctr_year_sample, "cid", "yid", config_list = config, title = "Exploring the Accrual Landscape", abstract = exp_abs)
+ExPanD(ctr_year_sample, df_def = ctr_year_sample_def, config_list = config, title = "Exploring the Accrual Landscape", abstract = exp_abs)
 
 # Everything below this line will not be run automatically
 # as ExPanD does not return. Run it if you need it 

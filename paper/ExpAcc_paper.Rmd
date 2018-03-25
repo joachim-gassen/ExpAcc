@@ -185,6 +185,8 @@ We start the replication by reproducing the sample of BLZ, thereby following the
 vd <- readRDS("raw_data/blz_var_definitions.RDS")
 vt <- data.frame(Variable=vd$var_name, Definition=vd$var_def)
 vt <- vt[c(7:12, 6, 5, 13, 14),]
+vt[1]$var_def <- "0.5*lag(at) + 0.5*at"
+vt[4]$var_def <- "(act - lag(act) - (che - lag(che)) - ((lct - lag(lct)) - (dlc - lag(dlc))) - dp)/avg_at"
 kable(vt, format = "latex", 
       row.names = FALSE, booktabs = TRUE, linesep = "") -> kab_latex
 

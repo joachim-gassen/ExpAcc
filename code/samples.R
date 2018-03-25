@@ -72,8 +72,8 @@ prepare_us_samples <- function() {
     winsorize(exclude = "mv", byval = "year") %>%
     select_variables(c(vd$var_name)) %>%
     group_by(gvkey) %>%
-    mutate(leadcfo = lead(cfo, order_by = year),
-           lagcfo = lag(cfo, order_by = year))
+    mutate(leadcfo = mleadlag(cfo, 1, year),
+           lagcfo = mleadlag(cfo, -1, year))
   
   rep_sample <- droplevels(as.data.frame(rep_sample))
   rep_sample$year <- as.ordered(rep_sample$year)
@@ -89,8 +89,9 @@ prepare_us_samples <- function() {
     winsorize(exclude = "mv", byval = "year") %>%
     select_variables(c(vd$var_name)) %>%
     group_by(gvkey) %>%
-    mutate(leadcfo = lead(cfo, order_by = year),
-           lagcfo = lag(cfo, order_by = year))
+    mutate(leadcfo = mleadlag(cfo, 1, year),
+           lagcfo = mleadlag(cfo, -1, year))
+  
   
   test_sample <- droplevels(as.data.frame(test_sample))
   test_sample$year <- as.ordered(test_sample$year)
@@ -193,8 +194,8 @@ prepare_int_samples <- function() {
   rbind(temp_fewobs, temp_manyobs) %>%
     select_variables(c(vd$var_name)) %>%
     group_by(gvkey) %>%
-    mutate(leadcfo = lead(cfo, order_by = year),
-           lagcfo = lag(cfo, order_by = year)) -> 
+    mutate(leadcfo = mleadlag(cfo, 1, year),
+           lagcfo = mleadlag(cfo, -1, year)) -> 
     int_base_sample
   
   int_base_sample <- droplevels(as.data.frame(int_base_sample))
@@ -271,31 +272,5 @@ prepare_int_yearly_sample <- function(is) {
   cys$cid <- cys$country 
   cys$yid <- cys$year
   cys <- cys[,-11]
-
-  labels <- c(country = "ISO 3166-1 alpha-3 code identiying the jursidiction",
-              year = "Fiscal year, using Comuptstat's June 30 cutoff", 
-              cfo_mean = "Mean of cash flow from operations for the respective country year",
-              cfo_sd = "Standard deviation of cash flow from operations for the respective country year",
-              cfo_range = "Range of cash flow from operations for the respective country year",
-              cfo_skew = "Skewness of cash flow from operations for the respective country year",
-              cfo_kurt = "Kurtosis of cash flow from operations for the respective country year",
-              cfo_min = "Minimum of cash flow from operations for the respective country year",
-              cfo_max = "Maximum of cash flow from operations for the respective country year",
-              cfo_pneg = "Percentage of negative cash flow from operations for the respective country year",
-              n = "Number of observations for the respective country year",
-              const_est = "Estimate of the intercept in an OLS model regressing total accruals on cfo, estimated for the respective country year",
-              cfo_est = "Estimate of the CFO coefficient in an OLS model regressing total accruals on cfo, estimated for the respective country year",
-              const_se = "Standard error of const_est",
-              cfo_se = "Standard error of cfo_est",
-              r2 = "R2 of an OLS model regressing total accruals on cfo, estimated for the respective country year",
-              adjr2 = "Adjusted R2 of an OLS model regressing total accruals on cfo, estimated for the respective country year",
-              resid_cfo = "Residual from a model regressing cfo_est on cfo_mean, cfo_sd, cfo_range, cfo_skew and cfo_kurt at country level",
-              resid_adjr2 = "Residual from a model regressing adjr2 on cfo_mean, cfo_sd, cfo_range, cfo_skew and cfo_kurt at country level",
-              time = "a time trend indicator, defined as year - 1989",
-              cid = "country id for Expand (identical to country)",
-              yid = "year id for Expand (identical to year)")
-  
-  label(cys) <- lapply(names(labels), 
-                       function(x) label(cys[,x]) = labels[x])
   return(as.data.frame(cys))
 }

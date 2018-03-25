@@ -26,6 +26,12 @@ clear_labels <- function(x) {
 }
 
 
+mleadlag <- function(x, n, ts_id) {
+  pos <- match(as.numeric(ts_id) + n, as.numeric(ts_id))
+  x[pos]
+}
+
+
 apply_screen <- function(df, filter_list) {
   my_filter <- paste(filter_list, collapse = "&")
   filter_(df, my_filter)
