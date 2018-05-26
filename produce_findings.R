@@ -39,7 +39,7 @@ source("code/videos.R")
 ### Installing packages (if not already installed) and attaching them 
 
 pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe",
-          "dplyr", "tidyr", "joachim-gassen/ExPanDaR",
+          "dplyr", "tidyr", "ExPanDaR",
           "lubridate", "broom", "tweenr", "moments",
           "Hmisc", "RCurl", "nteetor/gganimate")
 
@@ -94,7 +94,9 @@ exp_abs <- readChar(exp_abs_fname, file.info(exp_abs_fname)$size)
 load("raw_data/ctr_year_sample_def.Rdata")
 config <- readRDS("raw_data/exp_acc_config.RDS")
 
-ExPanD(ctr_year_sample, df_def = ctr_year_sample_def, config_list = config, title = "Exploring the Accrual Landscape", abstract = exp_abs)
+ExPanD(ctr_year_sample, df_def = ctr_year_sample_def, 
+       config_list = config, title = "Exploring the Accrual Landscape", 
+       components = c(T, F, rep(T, 9)), abstract = exp_abs)
 
 # Everything below this line will not be run automatically
 # as ExPanD does not return. Run it if you need it 
