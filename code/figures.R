@@ -43,31 +43,45 @@ level_reg_results_by_decile <- function(df, decilevar) {
 }
 
 
-prepare_fig_level_results <- function(ts) {
-  ts <- test_sample
-  t <- prepare_regression_table(ts, dvs="tacc", idvs="cfo", byvar="year")
-  res <- do.call("rbind", lapply(t$models, function(x) {
-    year <- x$byvalue
-    const <- x$model$coefficients[1]
-    cfo <- x$model$coefficients[2]
-    adjr2 <- summary(x$model)$adj.r.squared 
-    data.frame(year, const, cfo, adjr2, stringsAsFactors = FALSE)
-  }))
-  res <- res[-1,]
-  res$year <- as.numeric(res$year)
-  res$sample <- "Test"
-  blz_res <- read.csv("raw_data/blz_tab2_results_levels.csv", stringsAsFactors = FALSE)
-  blz_res$sample <- "BLZ"
-  res <- rbind(res, blz_res)
+prepare_fig_blz_results <- function() {
+  blz_result <- read.csv("raw_data/blz_reg_results.csv", stringsAsFactors = FALSE)
+
+  gcfo <- ggplot(blz_result, aes(x=year, y=level_cfo_est)) +
+    geom_point(size = 2, color = hue_pal()(1)) +
+    theme_bw() + guides(shape = FALSE) +
+    xlab("Year") +
+    ylab(expression(beta[1]))
   
-  gcfo <- ggplot(res, aes(x=year, y=cfo, color=sample, shape=sample)) +
+  gr2 <- ggplot(blz_result, aes(x=year, y=level_adjr2)) +
+    geom_point(size = 2, color = hue_pal()(1)) +
+    theme_bw()  +
+    xlab("Year") +
+    ylab(expression(paste("Adj. ", R^2))) 
+  
+  ggarrange(gcfo, gr2, nrow = 1, ncol = 2)
+}
+
+prepare_fig_rep_blz_results <- function(ys, model, idv) {
+  vars <- c("year", 
+            paste0(model, "_", idv, "_est"),
+            paste0(model, "_adjr2"))
+  res <- ys[, vars]
+  res$sample <- paste(model, "test")
+
+  blz_result <- read.csv("raw_data/blz_reg_results.csv", stringsAsFactors = FALSE)
+  blz_res <- blz_result[, vars]
+  blz_res$sample <- paste(model, "BLZ")
+  res <- rbind(res, blz_res)
+  res$year <- as.numeric(as.character(res$year))
+  
+  gcfo <- ggplot(res, aes_string(x="year", y=names(res)[2], color="sample", shape="sample")) +
     geom_point(size = 2) +
     theme_bw() + guides(shape = FALSE) +
     xlab("Year") +
-    ylab(expression(beta[1])) + 
+    ylab(names(res)[2]) + 
     theme(legend.position="none")
   
-  gr2 <- ggplot(res, aes(x=year, y=adjr2, color=sample, shape=sample)) +
+  gr2 <- ggplot(res, aes_string(x="year", y=names(res)[3], color="sample", shape="sample")) +
     geom_point(size = 2) +
     theme_bw()  +
     xlab("Year") +
@@ -85,7 +99,7 @@ prepare_fig_level_by_at <- function(ts, testvar) {
                                     na.rm=TRUE)
   r <- test_time_reg_across_sub_samples(ts, "avg_at_cpi2014_q10", testvar, silent = TRUE)
   
-  if(testvar == "cfo") ylab_text <- expression(b[1])
+  if(testvar == "cfo_est") ylab_text <- expression(b[1])
   if(testvar == "adjr2") ylab_text <- expression(paste("Adj. ", R^2))
   
   coef_plot(est = r$coef, lb95 = r$lb95, ub95 = r$ub95, label = r$byvar) +
@@ -109,7 +123,7 @@ prepare_fig_level_by_ind <- function(ts, testvar) {
   df$ff48ind <- droplevels(df$ff48ind)
   r <- test_time_reg_across_sub_samples(df, "ff48ind", testvar, silent = TRUE)
   
-  if(testvar == "cfo") ylab_text <- expression(b[1])
+  if(testvar == "cfo_est") ylab_text <- expression(b[1])
   if(testvar == "adjr2") ylab_text <- expression(paste("Adj. ", R^2))
   
   coef_plot(est = r$coef, lb95 = r$lb95, ub95 = r$ub95, label = r$byvar, order = "est") + 
@@ -124,7 +138,7 @@ prepare_fig_level_by_cfo <- function(ts, testvar) {
   
   r <- test_time_reg_across_sub_samples(ts, "cfo_q10", testvar, silent = TRUE)
   
-  if(testvar == "cfo") ylab_text <- expression(b[1])
+  if(testvar == "cfo_est") ylab_text <- expression(b[1])
   if(testvar == "adjr2") ylab_text <- expression(paste("Adj. ", R^2))
   
   coef_plot(est = r$coef, lb95 = r$lb95, ub95 = r$ub95, label = r$byvar) +
@@ -162,6 +176,25 @@ prepare_fig_level_comp <- function(ts, var) {
 }
 
 
+prepare_fig_ys_sbs <- function(ys) {
+  ys$year <- as.numeric(as.character(ys$year))
+  gcfo_est <- ggplot(ys, aes(x=year, y=level_cfo_est)) +
+    geom_point(size = 2, color = "blue") +
+    theme_bw(base_size = 14) +
+    xlab("Year") +
+    ylab(expression(beta[1]))
+  
+  gcfo_sd <- ggplot(ys, aes(x=year, y=cfo_sd)) +
+    geom_point(size = 2, color = "blue") +
+    theme_bw(base_size = 14) +
+    xlab("Year") +
+    ylab(expression("cfo_sd"))
+  
+  ggarrange(gcfo_est, gcfo_sd, nrow = 1, ncol = 2)
+}
+
+
+
 prepare_fig_scatter_sbs <- function(ts) {
   ts_early <- ts[(ts$year < 1974) & !is.na(ts$ff12ind),]
   ts_early <- ts_early[sample(nrow(ts_early), 20000),]
@@ -191,14 +224,34 @@ prepare_fig_cfo_density_sbs <- function(ts) {
     theme(strip.background = element_blank()) +  geom_hline(yintercept=0, colour="gray90", size=0.5)
 }
 
+prepare_fig_cfo_density_ridge <- function(ts) {
+  ts$year <- as.numeric(as.character(ts$year))
+  ggplot(ts, aes(x = cfo, y = year, group = year)) + 
+    geom_density_ridges(rel_min_height = 0.01, alpha = 0.75) + theme_bw()
+}
+
+prepare_fig_level_by_age <- function(ts, testvar) {
+  r <- test_time_reg_across_sub_samples(ts, "age_q10", testvar, silent = TRUE)
+  
+  if(testvar == "cfo") ylab_text <- expression(b[1])
+  if(testvar == "adjr2") ylab_text <- expression(paste("Adj. ", R^2))
+  
+  coef_plot(est = r$coef, lb95 = r$lb95, ub95 = r$ub95, label = r$byvar) +
+    xlab("Firm Age") +
+    ylab(ylab_text) + 
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.3, hjust = 1))
+}
+
 
 prepare_fig_time_effect_sbs <- function(e, test) {
-  if (test == "cfo") {
+   if (test == "cfo") {
     e <- e[order(e$base_cfo_est),]
     e <- select(e, country, matches("cfo"))
+    ylab_text <- expression(paste("Dependent Variable: ", beta[1]))
   } else {
     e <- e[order(e$base_adjr2_est),]
     e <- select(e, country, matches("adjr2"))
+    ylab_text <- expression(paste("Dependent Variable: Adj. ", R^2))
   }
   e$country <- factor(e$country, levels = e$country)
   e %>% 
@@ -206,6 +259,10 @@ prepare_fig_time_effect_sbs <- function(e, test) {
     extract(model_statistic, c("model", "statistic"), "(.*)_(.*)") %>%
     spread(statistic, value) -> elong
   
+  elong$model[grep("base", elong$model)] <- "Model (2)"
+  elong$model[grep("full", elong$model)] <- "Model (3)"
+  elong$model[grep("resid", elong$model)] <- "Model (4)"
+
   ep <- ggplot(elong, aes(country)) +
     geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
     geom_pointrange(aes(y = est, ymin = lb95, ymax = ub95),
@@ -213,36 +270,36 @@ prepare_fig_time_effect_sbs <- function(e, test) {
     facet_grid(model ~ .) + 
     theme_bw() +
     theme(strip.background = element_blank()) + 
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.3, hjust = 1))
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.3, hjust = 1)) +
+    xlab("Country (having at least 30 annual observations and 20 years of data)") +
+    ylab(ylab_text) 
   return(ep)
 }
 
 
 prepare_fig_yearly_fixed_effects <- function(ys, model) {
   if (model == "iacted_cfo")  {
-    m <- felm(cfo_est ~ cfo_mean*country + 
+    m <- felm(level_cfo_est ~ cfo_mean*country + 
                 cfo_sd*country + 
-                cfo_range*country + 
                 cfo_skew*country + 
                 cfo_kurt*country | 
                 country + year , 
-              data=ctr_year_sample)
+              data=ys)
   } else if (model == "iacted_adjr2") { 
-    m <- felm(adjr2 ~ cfo_mean*country + 
+    m <- felm(level_adjr2 ~ cfo_mean*country + 
                 cfo_sd*country + 
-                cfo_range*country + 
                 cfo_skew*country + 
                 cfo_kurt*country | 
                 country + year , 
-              data=ctr_year_sample)
+              data=ys)
   } else if (model == "resid_cfo") {  
-    m <- felm(resid_cfo ~ 0 | 
+    m <- felm(level_resid_cfo ~ 0 | 
                 country + year , 
-              data=ctr_year_sample)
+              data=ys)
   } else if (model == "resid_adjr2") {
-    m <- felm(resid_adjr2 ~ 0 | 
+    m <- felm(level_resid_adjr2 ~ 0 | 
                 country + year , 
-              data=ctr_year_sample)
+              data=ys)
   } else stop("Unknown model")
   
   getfe(m) %>%
@@ -257,3 +314,76 @@ prepare_fig_yearly_fixed_effects <- function(ys, model) {
     theme_bw() + xlab("Year") + 
     ylab(paste0("Fixed effects ", model, " model"))
 }
+
+
+prepare_figure_reb_sample <- function(ws, ts) {
+  ts <- test_sample
+  ws <- reb_us
+  ws %>%
+    group_by(year) %>%
+    do(yrly_model = lm(tacc ~ cfo, data=.)) -> regm
+  
+  regm %>% 
+    glance(yrly_model) %>%
+    transmute(r2 = r.squared,
+              adjr2 = adj.r.squared) -> reb_base_r2
+  regm %>% 
+    tidy(yrly_model) %>%
+    filter(term == "cfo") %>%
+    transmute(cfoest = estimate) -> reb_base_cfoest
+  
+  ws %>%
+    group_by(year) %>%
+    do(yrly_model = lm(tacc ~ (cfo < 0) + (cfo < 0)*cfo, data=.)) -> regm
+  
+  regm %>% 
+    glance(yrly_model) %>%
+    transmute(r2 = r.squared,
+              adjr2 = adj.r.squared) -> reb_bs_r2
+  regm %>% 
+    tidy(yrly_model) %>%
+    filter(term == "cfo") %>%
+    transmute(cfoest = estimate) -> reb_bs_cfoest
+
+  ts %>%
+    group_by(year) %>%
+    do(yrly_model = lm(tacc ~ cfo, data=.)) -> regm
+  
+  regm %>% 
+    glance(yrly_model) %>%
+    transmute(r2 = r.squared,
+              adjr2 = adj.r.squared) -> base_r2
+  regm %>% 
+    tidy(yrly_model) %>%
+    filter(term == "cfo") %>%
+    transmute(cfoest = estimate) -> base_cfoest
+  
+  w_us <- cbind(inner_join(base_r2, base_cfoest), model=rep("base", 51))
+  w_us <- rbind(w_us,
+                cbind(inner_join(reb_base_r2, reb_base_cfoest), model=rep("reb_base", 51)))
+  w_us <- rbind(w_us,
+                cbind(inner_join(reb_bs_r2, reb_bs_cfoest), model=rep("reb_bs", 51)))
+  
+  w_us$year <- as.numeric(as.character(w_us$year))
+  
+  gcfo <- ggplot(w_us, aes(x=year, y=cfoest, color=model, shape=model)) +
+    geom_point(size = 2) +
+    theme_bw()  +
+    xlab("Year") +
+    ylab(expression(beta[1])) + 
+    geom_smooth() +
+    theme(legend.position="none")
+  
+  gr2 <- ggplot(w_us, aes(x=year, y=adjr2, color=model, shape=model)) +
+    geom_point(size = 2) +
+    theme_bw() +
+    xlab("Year") +
+    ylab(expression(paste("Adj. ", R^2)))  +
+    labs(color = "Sample") + 
+    labs(shape = "Sample") + 
+    geom_smooth(show.legend = FALSE) +
+    theme(legend.position = c(0.8, 0.8))
+  
+  return(ggarrange(gcfo, gr2, nrow = 1, ncol = 2))  
+}
+

@@ -13,6 +13,14 @@ install_pkg_if_missing_and_attach <- function(pkg_string) {
 } 
 
 
+detach_all_pkg <- function() {
+  basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
+  package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
+  package.list <- setdiff(package.list,basic.packages)
+  if (length(package.list)>0)  for (package in package.list) detach(package, character.only = TRUE)
+}
+
+
 clear_labels <- function(x) {
   if(is.list(x)) {
     for(i in 1 : length(x)) class(x[[i]]) <- setdiff(class(x[[i]]), 'labelled') 
@@ -140,6 +148,7 @@ coef_plot <- function(est, lb95, ub95,
 
 
 generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year") {
+  df <- droplevels(df[complete.cases(df[,c(byvar, dvs, idvs)]), c(byvar, dvs, idvs)])
   t <- prepare_regression_table(df, dvs, idvs, byvar = byvar)
   res <- do.call("rbind", lapply(t$models, function(x) {
     byvalue <- x$byvalue
@@ -150,7 +159,7 @@ generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year") {
     adjr2 <- summary(x$model)$adj.r.squared 
     data.frame(byvalue, n, t(coef), t(se), r2, adjr2, stringsAsFactors = FALSE, row.names = NULL)
   }))
-  colnames(res) <- c(byvar, "n", "const", idvs, "const_se", paste0(idvs, "_se"), "r2", "adjr2")
+  colnames(res) <- c(byvar, "n", "const", paste0(idvs, "_est"), "const_se", paste0(idvs, "_se"), "r2", "adjr2")
   res <- res[-1,]
   return(res)
 }
@@ -238,12 +247,12 @@ return_estimates <- function(data, eq) {
 estimate_int_time_effect <- function(cys) {
   cys %>%
     group_by(country) %>%
-    do(base_cfo = return_estimates(data = ., cfo_est ~ time),
-       base_adjr2 = return_estimates(data = ., adjr2 ~ time),
-       full_cfo = return_estimates(data = ., cfo_est ~ time + cfo_mean + cfo_sd + cfo_range + cfo_skew + cfo_kurt),
-       full_adjr2 = return_estimates(data = ., adjr2 ~ time + cfo_mean + cfo_sd + cfo_range + cfo_skew + cfo_kurt),
-       resid_cfo = return_estimates(data = ., resid_cfo ~ time), 
-       resid_adjr2 = return_estimates(data = ., resid_adjr2 ~ time)) %>%
+    do(base_cfo = return_estimates(data = ., level_cfo_est ~ time),
+       base_adjr2 = return_estimates(data = ., level_adjr2 ~ time),
+       full_cfo = return_estimates(data = ., level_cfo_est ~ time + cfo_mean + cfo_sd  + cfo_skew + cfo_kurt),
+       full_adjr2 = return_estimates(data = ., level_adjr2 ~ time + cfo_mean + cfo_sd  + cfo_skew + cfo_kurt),
+       resid_cfo = return_estimates(data = ., level_resid_cfo ~ time), 
+       resid_adjr2 = return_estimates(data = ., level_resid_adjr2 ~ time)) %>%
     unnest(.sep = "_") -> estimates
   return(data.frame(estimates))
 }
