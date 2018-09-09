@@ -2,32 +2,31 @@
 #
 # This code produces all the analyses for the paper 
 #
-# Exploring the Accrual Landscape:
-# A Note on the Usefulness of Open Science for Empirical Archival Research
+#   Exploring the Accrual Landscape
 #
-# Martin Bierey and Joachim Gassen
+# authored by Martin Bierey and Joachim Gassen
 #
 # Make sure that you set your working directory ("setwd()") to 
 # where this file is before sourcing this file.
+#
+# Refer to the Appendix in the paper for additional guidance
 
 rm (list=ls())
+
+# Set the below to TRUE if you want repull Compustat data from WRDS 
+# This also needs to be done at least once and can also be done by sourcing
+# code/fetch_wrds_data.R directly.
+#
+# You will be asked for your WRDS username/password.
+# Your password will not be stored.
+#
+
+pull_wrds_data <- TRUE
 
 # Set the below to TRUE when you want repull consumer price data (needs to be done at least once)
 # and the iso3 country level name table (needs to be done at least once)
 
 refresh <- TRUE
-
-
-# Set the below to TRUE if you want repull Compustat data from WRDS 
-# This also needs to be done at least once and can also be done by running
-# code/fetch_wrds_data.R directly.
-#
-# NOTE: code/fetch_wrds_data.R needs editing prior to sourcing!
-#
-# Refer to the Appendix in the paper for additional guidance
-
-fetch_wrds_data <- FALSE
-
 
 ### The sourced files below contain functions 
 ### with the main code for the analyses
@@ -52,12 +51,11 @@ invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
 # Note: The dynamic title generation of the scatter videos
 # needs a forked version of gganimate
 
-
 prepare_fig_blz_results()
 
 ### Generate samples
 
-if (fetch_wrds_data) source("code/fetch_wrds_data.R", local = new.env())
+if (pull_wrds_data) source("code/pull_wrds_data.R", local = new.env())
 
 list2env(prepare_us_samples(), environment())
 list2env(prepare_int_samples(), environment())
@@ -109,15 +107,17 @@ ExPanD(list(int_ys = int_ys, us_ys = us_ys), df_def = ys_def,
        config_list = config_int, title = "Exploring the Accrual Landscape", 
        abstract = exp_abs, components = c(T, F, T, T, T, F , F, rep(T, 5)))
 
+# Everything below this line will not be run automatically
+# as ExPanD does not return. Run it if you need it 
+
+### Start Expand with U.S. sample
+
 ExPanD(list(int_ys = int_ys, us_ys = us_ys), df_def = ys_def, 
        df_name = c("International country year sample", "US country year sample"),
        config_list = config_us, title = "Exploring the Accrual Landscape", 
        abstract = exp_abs, components = c(F, F, T, T, T, F , F, T, F, T, T, T))
 
-# Everything below this line will not be run automatically
-# as ExPanD does not return. Run it if you need it 
-
-### Prepare videos
+### Prepare video
 
 create_scatter_video(test_sample, "BLZ replicated sample", x="cfo", y="tacc", 
                      size="avg_at_cpi2014", size_legend="Average AT (2014 prices)",

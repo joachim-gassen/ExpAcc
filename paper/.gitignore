@@ -10,6 +10,8 @@
 *.utf8.md
 *.knit.md
 .Rproj.user
+*.fff
+*.ttt
 
 # .DS_Store Files from MacOS
 *.DS_Store

@@ -58,24 +58,25 @@ invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
 
 opts_knit$set(root.dir = "..")
 
-# Set the below to TRUE when you want repull consumer price data (needs to be done at least once)
-
-refresh <- FALSE
-
 # Set the below to TRUE if you want repull Compustat data from WRDS 
 # This also needs to be done at least once and can also be done by running
 # code/fetch_wrds_data.R directly.
 #
-# NOTE: code/fetch_wrds_data.R needs editing prior to sourcing!
+# You will be asked for your WRDS username/password.
+# Your password will not be stored.
 #
 # Refer to the Appendix in the paper for additional guidance
 
-fetch_wrds_data <- FALSE
+pull_wrds_data <- FALSE
+
+# Set the below to TRUE when you want repull consumer price data (needs to be done at least once)
+
+refresh <- FALSE
 
 ```
 
 ``` {r sample, include=FALSE, cache=TRUE}
-if (fetch_wrds_data) source("code/fetch_wrds_data.R", local = new.env())
+if (pull_wrds_data) source("code/pull_wrds_data.R", local = new.env())
 
 list2env(prepare_us_samples(), environment())
 list2env(prepare_int_samples(), environment())
@@ -495,19 +496,14 @@ To reproduce this paper and its findings, you need admin access to computational
 2. Install R to your system
 3. Download	RStudio:	https://www.rstudio.com/products/rstudio/download/
 4. After R has finished installing, install RStudio
-5. You will need Java to be installed to your system if you want access WRDS remotely (https://www.java.com/).
-6. If you have a Github account, you can link RStudio to it (follow the instructions under http://happygitwithr.com/) and then fork the Github repository https://github.com/joachim-gassen/ExpAcc
-7. If you do not have a Github account (yet), download the ZIP-File containing the repository for this paper from https://github.com/joachim-gassen/ExpAcc and extract it on your computer (click the top right green button named "clone or download").
-8. Start RStudio. Use the file window (normally placed as a tab window in the lower right part of the screen) to navigate where you have stored the repository. Set your working directory to that directory by using "More/Set As Working Directory". You can also change the working directory in RStudio by clicking on "session" and then "Set working directory". 
-9. In the "code" sub-directory, you will find a file named "fetch_wrds_data.R". Open it. The R code will open in the upper left corner of the screen. No worries if you never worked with R before. You only need to adjust a few things to adjust the code to your WRDS subscription. 
-10. In order to fetch the data from WRDS you first need to encode your WRDS password by using SAS commands. If you have not installed SAS locally, you can run the SAS commands via the WRDS cloud (see the instruction here: https://wrds-www.wharton.upenn.edu/pages/support/wrds-cloud/connecting-wrds-cloud/using-ssh-connect-wrds-cloud/). Once you have connected to the WRDS Cloud via SSH, follow the PROC PWENCODE procedure as explained here https://wrds-web.wharton.upenn.edu/wrds/support/Accessing%20and%20Manipulating%20the%20Data/_010Encoding%20your%20WRDS%20Password.cfm.
-11. After you have successfully encoded your password, assign the encoded password to the variable "pass" in "fetch_wrds_data.R". Your user name is stored in the "user" variable.
-12. Download and save the SAS JDBC drivers as explained under the section "Preparing your environment - R Studio" of the following link: https://wrds-web.wharton.upenn.edu/wrds/support/Accessing%20and%20Manipulating%20the%20Data/_007R%20Programming/_001Using%20R%20with%20WRDS.cfm.  Save the SAS JDBC drivers and assign the respective path to the variable "wrds_path" in "fetch_wrds_data.R" (make sure that you use normal slashes "/" instead of backslashes for assigning the path).
-13. Save the changes that you have made to "fetch_wrds_data.R". You should now be able to download the necessary data from WRDS by sourcing "fetch_wrds_data.R" (Ctrl + Shift + Enter). Congratulations!
-14. Open the file "produce_findings.R" in the main directory. Run all (Ctrl + A, Ctrl + Enter). This will install necessary R packages, including the ExPanDaR package, generate all samples, tables and figures that are presented in the paper. In the end, it will open a local version of the ExPanD app that is also available online (https://jgassen.shinyapps.io/ExpAcc/).
-15. If you want to reproduce the whole paper, open the file ExpAcc_paper.Rmd in the paper directory and knit it (Ctrl + Shift + K, Icon in the tray above the text editor). Note: You will need to have some LaTeX distribution installed on your system for knit to produce PDF files.
-16. Where do you go from here? Well that depends. A good first step would be to explore and audit the code of the repository. It is contained in the code directory. The naming of the files should be somewhat self-explanatory. As an example for what to do: Experiment with the sample screens and the outlier treatment of the respective samples.
-17. If you stumble across something interesting, please get in touch. The most efficient way to do that would be to open up an issue on Github or to issue a pull request with your suggested changes. But we also cater to traditional email. Just reach out to gassen@wiwi.hu-berlin.de
+5. If you have a Github account, you can link RStudio to it (follow the instructions under http://happygitwithr.com/) and then fork the Github repository https://github.com/joachim-gassen/ExpAcc as a new project. Continue with step 8.
+6. If you do not have a Github account, download the ZIP-File containing the repository for this paper from https://github.com/joachim-gassen/ExpAcc and extract it on your computer (click the top right green button named "clone or download").
+7. Start RStudio. Use the file window (normally placed as a tab window in the lower right part of the screen) to navigate where you have stored the repository. Set your working directory to that directory by using "More/Set As Working Directory". You can also change the working directory in RStudio by clicking on "session" and then "Set working directory". 
+8. Open the file "produce_findings.R" in the main directory. Run all (Ctrl + A, Ctrl + Enter). This will install necessary R packages, including the ExPanDaR package, download neccessary data from WRDS, and generate all samples, tables and figures that are presented in the paper. As a last step, it will open a local version of the ExPanD app that is also available online (https://jgassen.shinyapps.io/ExpAcc/). To download the data from WRDS, it will prompt you for your WRDS username and your password. The password will not be stored. 
+9. After you downloaded the necessary data, you might want to set the variables "refresh" and "pull_wrds_data" in "produce_findings.R" to "FALSE" to avoid repulling the data. If you repull WRDS data, the old datafiles will be renamed.
+10. If you want to reproduce the paper itself (requires an installed Latex distribution), open the file "ExpAcc_paper.Rmd" in the paper directory and knit it (Ctrl + Shift + K, Icon in the tray above the text editor). Please note: While the code in "ExpAcc_paper.Rmd" is self-contained, it is not downloading data by default. If you have not already downloaded the data in step 8, set the variables "refresh" and "pull_wrds_data" in "ExpAcc_paper.Rmd" to "TRUE" prior to knitting the paper.
+11. Where do you go from here? A good first step would be to explore and audit the code of the repository. It is contained in the code directory. The naming of the files should be somewhat self-explanatory. As an example for what to do: Experiment with the sample screens and the outlier treatment of the respective samples.
+12. If you stumble across something interesting, please get in touch. The most efficient way to do that would be to open an issue on Github or to issue a pull request with your suggested changes. But we also cater to traditional email. Just reach out to gassen@wiwi.hu-berlin.de
 
 \pagebreak
 
