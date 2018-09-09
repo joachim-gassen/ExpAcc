@@ -34,6 +34,8 @@ header-includes:
   - \usepackage[hang,flushmargin]{footmisc}
   - \usepackage{caption} 
   - \captionsetup[table]{skip=24pt,font=bf}
+  - \usepackage{array}
+  - \newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
 ---
 
 ```{r setup, message=FALSE, warning=FALSE, include=FALSE}
@@ -52,7 +54,7 @@ pkgs <- c("knitr", "kableExtra", "captioner",
           "tidyverse", "joachim-gassen/ExPanDaR",
           "lubridate", "broom", "tweenr", "moments",
           "Hmisc", "RCurl", "nteetor/gganimate",
-          "ggridges")
+          "ggridges", "latex2exp")
 
 invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
 
@@ -123,20 +125,51 @@ Another reason why the findings of BLZ are a good candidate for exploration and 
 
 ```{r vardef, paged.print=FALSE, results="asis"}
 vd <- readRDS("raw_data/blz_var_definitions.RDS")
-vt <- data.frame(Variable=vd$var_name, Definition=vd$var_def, stringsAsFactors = FALSE)
-vt <- vt[c(7:12, 6, 5, 13, 14),]
-vt$Definition[1] <- "0.5*lag(at) + 0.5*at"
-vt$Definition[4] <- "(act - lag(act) - (che - lag(che)) - ((lct - lag(lct)) - (dlc - lag(dlc))) - dp)/avg_at"
+Variable <- paste0("$", gsub("_", "", toupper(vd[c(7:8, 11:12, 6, 5, 14), 1])), "_t$")
+definition <- c(
+  "$0.5AT_{t-1} + 0.5AT_t$",
+  "$IB_t/AVGAT_t$",
+  "If $(year > 1987)$ $(IBC_t - OANCF_t) / AVGAT_t$ else $(ACT_t - ACT_{t-1} - (CHE_{t} - CHE_{t-1}) - ((LCT_t - LAG_{t-1}) - (DLC_t - DLC_{t-1})) - DP_t) / AVGAT_t$",
+  "If $(year > 1987)$ $OANCF_t / AVGAT_t$ else $E_t - TACC_t$",
+  "$PRCCF_t * CSHO_t$",
+  "$CEQ_t / MV_t$",
+  "$XSGA_t /(SALE_t - IB_t)$"
+  )
+  
+Description <- c(
+  "Average total assets in M US-\\$",
+  "Earnings deflated by average total assets",
+  "Total accruals, derived from earnings and cash flow from operations as reported in the cash flow statement after 1987 and from the balance sheet before, deflated by average total assets",
+  "Cash flow from operations, as reported in the cash flow statement after 1987 and derived from the balance sheet before, deflated by average total assets",
+  "Market value of common stock in M US-\\$",
+  "Book-to-market ratio based on common stock",
+  "SG\\&A Intenisty: Share of total cost that can be attributed to selling, general and administrative expenses"
+)
+
+vt <- data.frame(Variable, definition, Description, stringsAsFactors = FALSE)
+names(vt)[2] <- 'Compustat definition'
+
 kable(vt, format = "latex",
       caption = "\\label{tab:vardef}Variable Definitions",
-      row.names = FALSE, booktabs = TRUE, linesep = "") -> kab_latex
+      row.names = FALSE, booktabs = TRUE, escape = FALSE, linesep = "") -> kab_latex
 
 lat_tab <- unlist(strsplit(kab_latex, "\n"))
+lat_tab[6] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+lat_tab[8] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+lat_tab[length(lat_tab) - 2] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+new_lat_tab <- lat_tab[1:8]
+for (i in 9:15) {
+  new_lat_tab[2*i - 9] <- lat_tab[i]
+  if (i!= 15) new_lat_tab[2*i - 8] <- "\\hline\\\\[-1.8ex]"
+}
+new_lat_tab <- c(new_lat_tab, lat_tab[16:length(lat_tab)])
+
 latex_tab <- c("\\begin{table}[!htbp]",
-               lat_tab[3],
+               new_lat_tab[3],
                "\\centering",
                "\\begin{threeparttable}",
-               lat_tab[5:(length(lat_tab) - 1)],
+               "\\begin{tabular}[t]{lP{6cm}P{8cm}}",
+               new_lat_tab[6:(length(new_lat_tab) - 1)],
                "\\begin{tablenotes}[flushleft]",
                "\\setlength{\\labelsep}{0pt}",
                "\\footnotetext",
@@ -154,13 +187,20 @@ We start by reproducing the sample of BLZ, thereby following the sample selectio
 t <- prepare_descriptive_table(rep_sample[, c("e", "tacc", "lagcfo", 
                                              "cfo", "leadcfo", "mv", 
                                              "bm", "sgaint")])
+rownames(t$df) <- c("$E_t$", "$TACC_t$", "$CFO_{t-1}$", "$CFO_t$", "$CFO_{t+1}$", "$MV_t$",
+                    "$BM_t$", "$SGAINT_t$")
+names(t$df)[c(5,7)] <- c("25 \\%", "75 \\%")
 kable(t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
       caption = "\\label{tab:descriptives_rs}Descriptive Statistics Reproduced Sample",
       format.args = list(decimal.mark = ".", big.mark = ",", 
                          scientific=FALSE),
-      booktabs = TRUE, linesep = "") -> kab_latex
+      booktabs = TRUE, escape = FALSE, linesep = "") -> kab_latex
 
 lat_tab <- unlist(strsplit(kab_latex, "\n"))
+lat_tab[6] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+lat_tab[8] <- "\\hline\\\\[-1.8ex]"
+lat_tab[length(lat_tab) - 2] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+
 latex_tab <- c("\\begin{table}[!htbp]",  
                lat_tab[3],
                "\\begin{threeparttable}",
@@ -168,7 +208,7 @@ latex_tab <- c("\\begin{table}[!htbp]",
                "\\begin{tablenotes}[flushleft]",
                "\\setlength{\\labelsep}{0pt}",
                "\\footnotetext",
-               "\\item Note: This reproduced sample is based on a Compustat North America dump and the screens as reported by BLZ, p. 49f. Variables are as defined in Table \\ref{tab:vardef}.",
+               "\\item Note: This reproduced sample contains annual Compustat North America data for the period 1964 to 2014. The sample selection process follows the procedure described in BLZ, p.49f: We delete observations from the financial services industry, observations from years with significant mergers/acquisitions activity and observations with missing cash flow or accrual data. Also in line with BLZ, we by-year winsorize the data to the top and bottom percentile. Variables are as defined in Table \\ref{tab:vardef}.",
                "\\end{tablenotes}",
                "\\end{threeparttable}",
                "\\end{table}")
@@ -188,14 +228,21 @@ We assume that our initial Compustat data screens differ from the screens that B
 t <- prepare_descriptive_table(test_sample[, c("e", "tacc", "lagcfo", 
                                                "cfo", "leadcfo", "mv", 
                                                "bm", "sgaint")])
+rownames(t$df) <- c("$E_t$", "$TACC_t$", "$CFO_{t-1}$", "$CFO_t$", "$CFO_{t+1}$", "$MV_t$",
+                    "$BM_t$", "$SGAINT_t$")
+names(t$df)[c(5,7)] <- c("25 \\%", "75 \\%")
 
 kable(t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
       caption = "\\label{tab:descriptives_ts}Descriptive Statistics Test Sample",
       format.args = list(decimal.mark = ".", big.mark = ",", 
                          scientific=FALSE),
-      booktabs = TRUE, linesep = "") -> kab_latex
+      booktabs = TRUE, linesep = "", escape = FALSE) -> kab_latex
 
 lat_tab <- unlist(strsplit(kab_latex, "\n"))
+lat_tab[6] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+lat_tab[8] <- "\\hline\\\\[-1.8ex]"
+lat_tab[length(lat_tab) - 2] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+
 latex_tab <- c("\\begin{table}[!htbp]",  
                lat_tab[3],
                "\\begin{threeparttable}",
@@ -203,7 +250,7 @@ latex_tab <- c("\\begin{table}[!htbp]",
                "\\begin{tablenotes}[flushleft]",
                "\\setlength{\\labelsep}{0pt}",
                "\\footnotetext",
-               "\\item Note: The test sample is based on the reproduced sample reported in Table \\ref{tab:descriptives_rs}. In addition, observations with $avg\\_at$ below M US-\\$ 7.5 are excluded. Variables are as defined in Table \\ref{tab:vardef}.",
+               "\\item Note: The test sample is based on the reproduced sample reported in Table \\ref{tab:descriptives_rs}. In addition to the sampling process described there, observations with $avg\\_at$ below M US-\\$ 7.5 are excluded. Variables are as defined in Table \\ref{tab:vardef}.",
                "\\end{tablenotes}",
                "\\end{threeparttable}",
                "\\end{table}")
@@ -217,7 +264,7 @@ Despite these remaining differences, we continue by reproducing the main finding
 
 \begin{equation}
 \label{level_reg}
-TACC = \beta_0 + \beta_1 CFO + \epsilon
+TACC_{t,i} = \beta_0 + \beta_1 CFO_{t,i} + \epsilon_{t,i}
 \end{equation}
 
 ```{r level_results, cache = TRUE, echo = FALSE, fig.cap="\\label{fig:level_results}Regression results for yearly estimates of model (\\ref{level_reg}) compared to results of BLZ, Table 2"}
@@ -229,36 +276,36 @@ The left hand side of Figure \ref{fig:level_results} presents the $\beta_1$ coef
 
 # Robustness
 
-We partition our test sample in order to assess the robustness of the main BLZ finding across sub-samples. We are particularly interested whether the diminishing accrual/cash flow relation is observable (i) across industries, (ii) for small as well as large firms and (iii) for firm-year observations with a low and a high magnitude of operating cash flows. For each sub-sample, we re-run the yearly regressions based on model \ref{level_reg}. In the second step, we use the generated beta coefficients (or Adjusted $R^2s$) and regress them on the variable $time$ (coded as $year-1964$): 
+We partition our test sample in order to assess the robustness of the main BLZ finding across sub-samples. We are particularly interested whether the diminishing accrual/cash flow relation is observable (i) across industries, (ii) for small as well as large firms and (iii) for firm-year observations with a low and a high magnitude of operating cash flows. For each sub-sample, we re-run the yearly regressions based on model \ref{level_reg}. In the second step, we use the generated beta coefficients (or Adjusted $R^2s$) and regress them on the variable $TIME$ (coded as $year-1964$): 
 
 \begin{equation}
 \label{time_reg}
-\beta_1(CFO) [Adj. R^2]= b_0 +b_1 time +\epsilon
+\beta_{1,t} [Adj. R^2_t]= b_0 +b_1 TIME_t +\epsilon_t
 \end{equation}
 
 The values for $b_1$ are plotted for the different sub-samples. A larger $b_1$ illustrates a more pronounced decline of the accrual/cash flow association over time for the respective sub-sample. When sub-sampling by firm size, we use average total assets but adjust the value for inflation by using the consumer price index as provided the U.S. Department of Labor. We use December 2014 as our indexing period. When sub-sampling by industry, we plot all industries that, according to the Fama/French 48 industries classification, have at least 10 observations for all years in the period 1964-2014.
  
-``` {r level_by_at, cache = TRUE, fig.cap="\\label{fig:level_by_at}$time$ coefficient of model (\\ref{time_reg}) by size deciles"}
+``` {r level_by_at, cache = TRUE, fig.cap="\\label{fig:level_by_at}$TIME$ coefficient of model (\\ref{time_reg}) by size deciles"}
 prepare_fig_level_by_at(test_sample, "cfo_est")
 ```
 
 As illustrated by Figure \ref{fig:level_by_at}, the time trend documented by BLZ manifests itself across all size groups but appears somewhat smaller for larger firms. BLZ already indicate that the diminishing association between cash flows and accruals is more pronounced for loss firms. As small firms are also more frequently reporting losses, our observations is well in line with the observations of BLZ. Next we turn to exploring the time trends across industries. 
 
-``` {r level_by_ind, cache = TRUE, fig.cap="\\label{fig:level_by_ind}$time$ coefficient of model (\\ref{time_reg}) by Fama/French industries"}
+``` {r level_by_ind, cache = TRUE, fig.height = 6, fig.cap="\\label{fig:level_by_ind}$TIME$ coefficient of model (\\ref{time_reg}) by Fama/French industries"}
 prepare_fig_level_by_ind(test_sample, "cfo_est")
 ```
 
 
 Also in line with BLZ, Figure \ref{fig:level_by_ind} documents that the time trend can be observed across virtually all industries. There does not appear to be an obvious systematic variation across industries. Finally, we plot the model coefficients across deciles of $CFO$, the independent variable of the model (\ref{level_reg}). 
 
-``` {r fig_level_by_cfo, cache = TRUE, fig.cap="\\label{fig:level_by_cfo}$time$ coefficient of model (\\ref{time_reg}) by $CFO$ deciles"}
+``` {r fig_level_by_cfo, cache = TRUE, fig.cap="\\label{fig:level_by_cfo}$TIME$ coefficient of model (\\ref{time_reg}) by $CFO$ deciles"}
 prepare_fig_level_by_cfo(test_sample, "cfo_est")
 ```
 
 
 Figure \ref{fig:level_by_cfo} shows that the time trend (of the diminishing accrual/cash flow association) is strongly moderated by the magnitude of operating cash flows. BLZ already show that the relationship between accruals and cash flows is weaker in years for which a higher fraction of firms report losses. However, we prefer to partition our sub-sample based on cash flows (rather than earnings) as they are not influenced by the dependent variable of model (\ref{level_reg}). We next explore whether the time trend with respect to the adjusted $R^2$ of model (\ref{level_reg}) varies systematically across sub-samples with different operating cash flows. Figure \ref{fig:level_by_cfo_r2} communicates the result.
 
-``` {r level_by_cfo_r2, cache = TRUE, fig.cap="\\label{fig:level_by_cfo_r2}$time$ coefficient of model (\\ref{time_reg}) with $Adj. R^2$ as dependent variable by cash flow deciles"}
+``` {r level_by_cfo_r2, cache = TRUE, fig.cap="\\label{fig:level_by_cfo_r2}$TIME$ coefficient of model (\\ref{time_reg}) with $Adj. R^2$ as dependent variable by cash flow deciles"}
 prepare_fig_level_by_cfo(test_sample, "adjr2")
 ```
 
@@ -277,7 +324,7 @@ The functional form of the cash flow-accrual relation has also been investigated
 
 To explore the development of the functional relation of cash flows from operations and total accruals over time, we estimate locally estimated smooth regressions for yearly samples. The result can be visualized by a video ([click here to see video](https://www.dropbox.com/s/66cscjo8fcadhwa/test_samplecfo_tacc_scatter.mp4?dl=1)) or by comparing the functional forms across two samples, one spanning the beginning of the sample period (1964-1973) and one spanning the end of the sample period (2005-2014).
 
-``` {r scatter_sbs, cache = TRUE, dev = "png", fig.cap="\\label{fig:scatter_sbs} $CFO$ and $TACC$ scatter plots (sample of 20,000 observations for each period)"}
+``` {r scatter_sbs, cache = TRUE, dev = "png", fig.height = 6, fig.cap="\\label{fig:scatter_sbs} $CFO$ and $TACC$ scatter plots (sample of 20,000 observations for each period)"}
 prepare_fig_scatter_sbs(test_sample)
 ```
 
@@ -285,7 +332,7 @@ Figure \ref{fig:scatter_sbs} and the video display a stark contrast in the estim
 
 The change in the functional form seems to be mainly driven by two types of firm-year observations that were not observable in the early sample periods: (i) observations with extremely low operating cash flows (ii) firm-year observations with moderate levels of operating cash flows but particularly low accruals. This results in a positive (negative) accrual/cash flow association for firm-year observations with negative (positive) cash flows towards the end of the sample period. Again, this finding is in line with Figure \ref{fig:level_by_cfo_comp}, which indicated that the accrual/cash flow association is strongly moderated by the magnitude of operating cash flows. 
 
-What also becomes apparent is that the distribution of cash flows and accruals becomes more dispersed towards the end of the sample period. To visualize the change in the distribution of operating cash flows over time, we plot density estimates over the sample years in Figure \ref{fig:CFO_density_ridge}.
+What also becomes apparent is that the distribution of cash flows and accruals becomes more dispersed towards the end of the sample period. To visualize the change in the distribution of operating cash flows over time, we plot density estimates over the sample years in Figure \ref{fig:cfo_density_ridge}.
 
 ``` {r cfo_density_ridge, cache = TRUE, fig.cap="\\label{fig:cfo_density_ridge}Density of $CFO$ over time"}
 prepare_fig_cfo_density_ridge(test_sample)
@@ -295,21 +342,21 @@ Towards the end of the sample period the distribution of cash flow from operatio
 
 BLZ already explore whether an increase in cash flow shocks over time might explain the attenuation of the accrual/cash flow association, but do not find that it significantly contributes to the effect (Table 4 of BLZ). However, due to the observable change in the functional form we would like to explore the impact of the changing cash flow distribution in more detail. 
 
-Similar to model (\ref{time_reg}), we use the yearly beta coefficients (or adjusted $R^2$) from model (\ref{level_reg}) as our dependent variable and regress them on $time$ as well as on one or multiple of the following distributional properties of the operating cash flow, which we determine annually for the cross-section: mean ($cfo\_mean$), standard deviation ($cfo\_sd$), skewness ($cfo\_skew$) and kurtosis ($cfo\_kurt$). Keep in mind that we scale cash flow from operations by average total assets and winsorize the variable by year in order to generate $CFO$. 
+Similar to model (\ref{time_reg}), we use the yearly beta coefficients (or adjusted $R^2$) from model (\ref{level_reg}) as our dependent variable and regress them on $TIME = year - 1964$ as well as on one or multiple of the following distributional properties of the operating cash flow, which we determine annually for the cross-section: mean ($CFO\_MEAN$), standard deviation ($CFO\_SD$), skewness ($CFO\_SKEW$) and kurtosis ($CFO\_KURT$). Keep in mind that we scale cash flow from operations by average total assets and winsorize the variable by year in order to generate $CFO$. 
 
 \begin{equation}
 \begin{aligned}
 \label{full_cfo_reg}
-\beta_1(CFO) [Adj. R^2] = &b_0 +b_1time + b_2cfo\_mean + b_3cfo\_sd  + \\ 
-&b_4cfo\_skew + b_5cfo\_kurt +\epsilon
+\beta_{1,t} [Adj. R^2_t] = &b_0 +b_1TIME_t + b_2CFO\_MEAN_t + b_3CFO\_SD_t  + \\ 
+&b_4CFO\_SKEW_t + b_5CFO\_KURT_t +\epsilon_t
 \end{aligned}
 \end{equation}
 
-In addition, we are interested in whether $time$ explains any remaining variance after controlling for changes in the underlying cash flow distribution. For this reason, we regress the residual variance (after controlling for the moments of the cash flow distribution but not time) on $time$.  
+In addition, we are interested in whether $TIME$ explains any remaining variance after controlling for changes in the underlying cash flow distribution. For this reason, we regress the residual variance (after controlling for the moments of the cash flow distribution but not time) on $TIME$.  
 
 \begin{equation}
 \label{resid_cfo_reg}
-resid\_cfo [resid\_adjr2]= b_0 +b_1 time +\epsilon
+RESID_{CFO,t} [RESID_{Adj. R^2,t}]= b_0 +b_1 TIME_t +\epsilon_t
 \end{equation}
  
 The results in Table \ref{tab:dist_tests_cfo} and Table \ref{tab:dist_tests_adjr2} indicate that a large part of the diminishing cash flow/accrual association can be explained by changes in the underlying cash flow distribution. In particular, it appears that the association between accruals and operating cash flows weakens as the cash flow distribution becomes more dispersed (in terms of its standard deviation) and more left-skewed (more observations with particularly negative cash flows).
@@ -317,7 +364,8 @@ The results in Table \ref{tab:dist_tests_cfo} and Table \ref{tab:dist_tests_adjr
 
 ``` {r dist_tests_cfo, cache = TRUE, results="asis"}
 dist_test <- prepare_tab_impact_cfo_dist_us(us_ys)
-dist_test[[1]]$table[12] <- "\\\\[-1.8ex] & cfo\\_est & cfo\\_est & cfo\\_est & cfo\\_est & cfo\\_est & cfo\\_est & resid\\_cfo \\\\ "
+dist_test[[1]]$table[12] <- "\\\\[-1.8ex] & $\\beta_1$ & $\\beta_1$ & $\\beta_1$ & $\\beta_1$ & $\\beta_1$ & $\\beta_1$ & $RESID_{CFO}$ \\\\ "
+
 latex_tab <- c("\\begin{table}[!htbp]",
                "\\caption{\\label{tab:dist_tests_cfo}Test for association of $CFO$ distribution statistics with model (\\ref{level_reg}) $\\beta_1$ coefficient}",
                "\\centering",
@@ -325,12 +373,14 @@ latex_tab <- c("\\begin{table}[!htbp]",
                "\\begin{threeparttable}",
                "\\setlength{\\tabcolsep}{2pt}",
                "\\begin{tabular}{lcccccccc}",
-               dist_test[[1]]$table[8:45],
+               dist_test[[1]]$table[8:14],
+               toupper(sub(pattern = "(\\b[a-zA-Z\\\\_]+\\b)", "$\\1$", dist_test[[1]]$table[15:31])),
+               dist_test[[1]]$table[32:45],
                "\\end{tabular}",
                "\\begin{tablenotes}[flushleft]",
                "\\setlength{\\labelsep}{0pt}",
                "\\footnotetext",
-               "\\item Note: This table reports OLS regression results for the respective variants of model (\\ref{full_cfo_reg}) (columns 1-6) and model (\\ref{resid_cfo_reg}) (column 7). The dependent variable in these columns 1-6 is the annual $\\beta_1$ coefficient of model 1. In column 7, the dependent variable is the residual of a variant of model (\\ref{full_cfo_reg}) including all $cfo$ moments but not $time$. For the independent variables the identifiers after the underscore indicate the repspective moment of the annual $cfo$ distribution. $time$ is a yearly indicator $= Year - 1964$. For the full model in column 6, variance inflation factors are reported in square brackets below the standard errors, which are reported in parantheses. $^{*}$/$^{**}$/$^{***}$ indicate two-sided significane levels of 10/5/1 \\%, respectively.",
+               "\\item Note: This table reports OLS regression results for the respective variants of model (\\ref{full_cfo_reg}) (columns 1-6) and model (\\ref{resid_cfo_reg}) (column 7). The dependent variable in columns 1-6 is the annual $\\beta_1$ coefficient of model 1. In column 7, the dependent variable $RESID_{CFO}$ is the residual of a variant of model (\\ref{full_cfo_reg}) including all $CFO$ moments but not $TIME$. For the independent variables the identifiers after the underscore indicate the repspective moment of the annual $CFO$ distribution. $TIME$ is a yearly indicator $= year - 1964$. For the full model in column 6, variance inflation factors are reported in square brackets below the standard errors, which are reported in parantheses. $^{*}$/$^{**}$/$^{***}$ indicate two-sided significane levels of 10/5/1 \\%, respectively.",
                "\\end{tablenotes}",
                "\\end{threeparttable}",
                "\\end{table}")
@@ -339,7 +389,7 @@ cat(paste(latex_tab, collapse = "\n"))
 ```
 
 ``` {r dist_tests_adjr2, cache = TRUE, results="asis"}
-dist_test[[2]]$table[12] <- "\\\\[-1.8ex] & adjr2 & adjr2 & adjr2 & adjr2 & adjr2 & adjr2 & resid\\_adjr2 \\\\ "
+dist_test[[2]]$table[12] <- "\\\\[-1.8ex] & $Adj. R^2$ & $Adj. R^2$ & $Adj. R^2$ & $Adj. R^2$ & $Adj. R^2$ & $Adj. R^2$ & $RESID_{Adj. R^2}$ \\\\ "
 latex_tab <- c("\\begin{table}[!htbp]",  
                "\\caption{\\label{tab:dist_tests_adjr2}Test for association of $CFO$ distribution statistics with model (\\ref{level_reg}) $Adj. R^2$}",
                "\\centering",
@@ -347,12 +397,14 @@ latex_tab <- c("\\begin{table}[!htbp]",
                "\\begin{threeparttable}",
                "\\setlength{\\tabcolsep}{2pt}",
                "\\begin{tabular}{lcccccccc}",
-               dist_test[[2]]$table[8:45],
+               dist_test[[2]]$table[8:14],
+               toupper(sub(pattern = "(\\b[a-zA-Z\\\\_]+\\b)", "$\\1$", dist_test[[2]]$table[15:31])),
+               dist_test[[2]]$table[32:45],
                "\\end{tabular}",
                "\\begin{tablenotes}[flushleft]",
                "\\setlength{\\labelsep}{0pt}",
                "\\footnotetext",
-               "\\item Note: This table reports OLS regression results for the respective variants of model (\\ref{full_cfo_reg}) (columns 1-6) and model (\\ref{resid_cfo_reg}) (column 7). The dependent variable in these columns 1-6 is the annual $Adj. R^2$ of model (\\ref{level_reg}). In column 7, the dependent variable is the residual of a variant of model (\\ref{full_cfo_reg}) including all $cfo$ moments but not $time$. For the independent variables the identifiers after the underscore indicate the repspective moment of the annual $cfo$ distribution. $time$ is a yearly indicator $= year - 1964$. For the full model in column 6, variance inflation factors are reported in square brackets below the standard errors, which are reported in parantheses. $^{*}$/$^{**}$/$^{***}$ indicate two-sided significane levels of 10/5/1 \\%, respectively.",
+               "\\item Note: This table reports OLS regression results for the respective variants of model (\\ref{full_cfo_reg}) (columns 1-6) and model (\\ref{resid_cfo_reg}) (column 7). The dependent variable in these columns 1-6 is the annual $Adj. R^2$ of model (\\ref{level_reg}). In column 7, the dependent variable $RESID_{Adj. R^2}$ is the residual of a variant of model (\\ref{full_cfo_reg}) including all $CFO$ moments but not $TIME$. For the independent variables the identifiers after the underscore indicate the repspective moment of the annual $CFO$ distribution. $TIME$ is a yearly indicator $= year - 1964$. For the full model in column 6, variance inflation factors are reported in square brackets below the standard errors, which are reported in parantheses. $^{*}$/$^{**}$/$^{***}$ indicate two-sided significane levels of 10/5/1 \\%, respectively.",
                "\\end{tablenotes}",
                "\\end{threeparttable}",
                "\\end{table}")
@@ -366,6 +418,14 @@ tab <- prepare_correlation_table(us_ys[,c(3:8, 13, 17, 36, 37, 42)], format = "l
 tab$kable_ret <- gsub("%", "\\%", tab$kable_ret)
 tab$kable_ret <- gsub("_", "\\\\_", tab$kable_ret)
 lat_tab <- unlist(strsplit(tab$kable_ret, "\n"))
+lat_tab[7:17] <- sub("(\\b[a-zA-Z2\\\\_]{2,}\\b)", "\\U$\\1$", lat_tab[7:17], perl = TRUE)
+lat_tab[13] <- sub("\\$.*\\$", "$\\\\beta_1$", lat_tab[13])
+lat_tab[14] <- sub("\\$.*\\$", "$Adj. R^2$", lat_tab[14])
+lat_tab[15] <- sub("\\$.*\\$", "$RESID_{CFO}$", lat_tab[15])
+lat_tab[16] <- sub("\\$.*\\$", "$RESID_{Adj. R^2}$", lat_tab[16])
+lat_tab[4] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+lat_tab[6] <- "\\hline\\\\[-1.8ex]"
+lat_tab[18] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
 latex_tab <- c("\\begin{table}[!htbp]",  
                "\\caption{\\label{tab:corr_yearly_us_sample}Correlation table for yearly U.S. sample}",
                "\\centering",
@@ -378,11 +438,11 @@ latex_tab <- c("\\begin{table}[!htbp]",
                "\\footnotetext",
                lat_tab[21:23],
                "\\end{table}")
-latex_tab[27] <- paste(latex_tab[27], "For variables starting with $cfo$, the identifiers after the underscore indicate the repspective moment of the annual $cfo$ distribution. For variables starting with $level$, the identifiers after the underscore indicate the respective statistic based on models (\\ref{full_cfo_reg}) and (\\ref{resid_cfo_reg}). $time$ is a yearly indicator $= year - 1964$.")
+latex_tab[27] <- paste(latex_tab[27], "For variables starting with $CFO$, the identifiers after the underscore indicate the repspective moment of the annual $CFO$ distribution. For variables starting with $level$, the identifiers after the underscore indicate the respective statistic based on models (\\ref{full_cfo_reg}) and (\\ref{resid_cfo_reg}). $TIME$ is a yearly indicator $= year - 1964$.")
 cat(paste(latex_tab, collapse = "\n"))               
 ```
 
-A look at the correlation coefficients in Table \ref{tab:corr_yearly_us_sample} reveals that $time$ is highly correlated with the properties of the cash flow distribution. For instance, the Pearson correlation coefficient for $time$ and $cfo\_sd$ is `r format(cor(us_ys$time, us_ys$cfo_sd), digits = 2)`. This might explain why BLZ do not find a significant impact of the standard deviation of cash flows on the cash flow/accrual association (see Table 4 of BLZ). Given these strong correlations and the resulting high variance inflation factors in columns 6 of Table \ref{tab:dist_tests_cfo} and Table \ref{tab:dist_tests_adjr2}, we believe that it is unfeasible to separate a general time effect from the effect of the change in the cash flow distribution within a sample of 51 annual observations.
+A look at the correlation coefficients in Table \ref{tab:corr_yearly_us_sample} reveals that $TIME$ is highly correlated with the properties of the cash flow distribution. For instance, the Pearson correlation coefficient for $TIME$ and $CFO\_SD$ is `r format(cor(us_ys$time, us_ys$cfo_sd), digits = 2)`. This might explain why BLZ do not find a significant impact of the standard deviation of cash flows on the cash flow/accrual association (see Table 4 of BLZ). Given these strong correlations and the resulting high variance inflation factors in columns 6 of Table \ref{tab:dist_tests_cfo} and Table \ref{tab:dist_tests_adjr2}, we believe that it is unfeasible to separate a general time effect from the effect of the change in the cash flow distribution within a sample of 51 annual observations.
 
 # International Replication
 
@@ -391,11 +451,16 @@ In order to address this concern and to explore whether the diminishing cash flo
 ```{r world_sample, cache = TRUE, results = "asis"}
 ctr_year_sample <- prepare_int_yearly_sample(all20_ctry_sample)
 time_effects <- estimate_int_time_effect(ctr_year_sample)
-kable(all20_ctry, format = "latex", booktabs = T, linesep = "",
+df <- all20_ctry
+names(df) <- c("ISO code", "Country", "# years", "# observations")
+kable(df, format = "latex", booktabs = T, linesep = "",
       format.args = list(decimal.mark = ".", big.mark = ",", 
                          scientific=FALSE)) -> kab_latex
 
 lat_tab <- unlist(strsplit(kab_latex, "\n"))
+lat_tab[3] <- "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]"
+lat_tab[5] <- "\\hline\\\\[-1.8ex]"
+
 latex_tab <- c("\\begin{table}[!htbp]",  
                "\\caption{\\label{tab:world_sample}International sample: Number of observations and years per country}",
                "\\centering",
@@ -403,13 +468,13 @@ latex_tab <- c("\\begin{table}[!htbp]",
                "\\begin{threeparttable}",
                "\\setlength{\\tabcolsep}{4pt}",
                lat_tab[2:31],
-               "\\midrule",
+               "\\hline\\\\[-1.8ex]",
                paste0("Total & & ", 
                       format(nrow(ctr_year_sample), big.mark = ","), 
                       " & ", 
                       format(nrow(all20_ctry_sample), big.mark = ","), 
                       "\\\\"),
-               "\\bottomrule",
+               "\\\\[-1.8ex]\\hline \\hline \\\\[-1.8ex]",
                "\\end{tabular}", 
                "\\begin{tablenotes}[flushleft]",
                "\\setlength{\\labelsep}{0pt}",
@@ -423,9 +488,9 @@ cat(paste(latex_tab, collapse = "\n"))
 
 Table \ref{tab:world_sample} shows the distribution of our test sample across countries. In a first step, we examine the extent to which the diminishing accrual/cash flow association represents an international phenomenon. For this reason, we re-run model (\ref{time_reg}) and plot the respective time coefficient in the upper graph of the following two figures. A higher (lower) coefficient in Figure \ref{fig:time_effect_cfo_world_sbs} (Figure \ref{fig:time_effect_adjr2_world_sbs}) indicates a more pronounced decline of the association between accruals and cash flows over time. The figures illustrate that the diminishing accrual/cash flow association is indeed an international phenomenon. In the majority of countries the time-trend is even more pronounced than in the US. However, it has to be noted that, as can be assessed by Figure \ref{fig:level_results}, the trend in the U.S. is most prominent in the period prior to 1989. 
 
-The two figures also show the $time$ coefficient obtained from re-running model (\ref{full_cfo_reg}) (see $full\_cfo$ graphs in the middle of the figures) and model (\ref{resid_cfo_reg}) (see $resid\_cfo$ graphs at the bottom of the figures) on the international sample. Similar to the results for the US sample, we find that for the majority of countries the coefficient on $time$ remains positive and significant when we control for changes in the underlying cash flow distribution. However, $time$ does not seem to explain a large part of the residual variance of the accrual/cash flow association after controlling for changes in the distributional properties of operating cash flows. Table \ref{tab:tests_world} provides the results for the same test based on the pooled sample and controlling for country fixed-effects. As the international sample has more independent observations, the variance inflation factors of the full model are considerably smaller, allowing for a clearer interpretation of the coefficients. We find that the skewness of the cash flow distribution has now a more significant influence, indicating that the more left-skewed the cash flow distribution (the more firm-years with negative cash flows), the weaker the cash flow/accrual association. The time trend remains significant with its magnitude decreasing substantially when purging out the cash flow distribution effects. 
+The two figures also show the $TIME$ coefficient obtained from re-running model (\ref{full_cfo_reg}) (see graphs in middle panel) and model (\ref{resid_cfo_reg}) (bottom panel) on the international sample. Similar to the results for the US sample, we find that for the majority of countries the coefficient on $TIME$ remains positive and significant when we control for changes in the underlying cash flow distribution. However, $TIME$ does not seem to explain a large part of the residual variance of the accrual/cash flow association after controlling for changes in the distributional properties of operating cash flows. Table \ref{tab:tests_world} provides the results for the same test based on the pooled sample and controlling for country fixed-effects. As the international sample has more independent observations, the variance inflation factors of the full model are considerably smaller, allowing for a clearer interpretation of the coefficients. We find that the skewness of the cash flow distribution has now a more significant influence, indicating that the more left-skewed the cash flow distribution (the more firm-years with negative cash flows), the weaker the cash flow/accrual association. The time trend remains significant with its magnitude decreasing substantially when purging out the cash flow distribution effects. 
 
-``` {r time_effect_cfo_world_sbs, fig.height = 8, cache = TRUE, fig.cap="\\label{fig:time_effect_cfo_world_sbs}$time$ coefficient around the world for different model specifications"}
+``` {r time_effect_cfo_world_sbs, fig.height = 8, cache = TRUE, fig.cap="\\label{fig:time_effect_cfo_world_sbs}$TIME$ coefficient around the world for different model specifications"}
 prepare_fig_time_effect_sbs(time_effects, "cfo")
 ```
 
@@ -435,7 +500,7 @@ prepare_fig_time_effect_sbs(time_effects, "adjr2")
 
 ``` {r tests_world, cache = TRUE, results="asis"}
 tab_tests_world <- prepare_tab_impact_cfo_dist_int(ctr_year_sample)
-tab_tests_world$table[12] <- "\\\\[-1.8ex] & cfo\\_est & cfo\\_est & resid\\_cfo & adjr2 & adjr2 & resid\\_adjr2 \\\\ "
+tab_tests_world$table[12] <- "\\\\[-1.8ex] & $\\beta_1$ & $\\beta_1$ & $RESID_{CFO}$ & $Adj. R^2$ & $Adj. R^2$ & $RESID_{Adj. R^2}$ \\\\ "
 latex_tab <- c("\\begin{table}[!htbp]",
                "\\caption{\\label{tab:tests_world}Test results for international sample}",
                "\\centering",
@@ -443,34 +508,36 @@ latex_tab <- c("\\begin{table}[!htbp]",
                "\\begin{threeparttable}",
                "\\setlength{\\tabcolsep}{6pt}",
                "\\begin{tabular}{lcccccc}",
-               tab_tests_world$table[8:42],
+               tab_tests_world$table[8:14],
+               sub(pattern = "(\\b[a-zA-Z\\\\_]+\\b)", "\\U$\\1$", tab_tests_world$table[15:31], perl = TRUE),
+               tab_tests_world$table[32:42],
                "\\end{tabular}",
                "\\begin{tablenotes}[flushleft]",
                "\\setlength{\\labelsep}{0pt}",
                "\\footnotetext",
-               "\\item Note: This table reports OLS regression results of running model (\\ref{time_reg}) (columns 1 and 4) and model (\\ref{full_cfo_reg}) (columns 2 and 5) for the international sample. The dependent variables in these columns are $\\beta_1$ (columns 1 and 2) and $Adj. R^2$ (columns 4 and 5) from the yearly regressions of model (\\ref{level_reg}). Columns 3 and 6 report the results for model (\\ref{resid_cfo_reg}). The dependent variable in columns 3 and 6 is the residual of a variant of model (\\ref{full_cfo_reg}) including all $cfo$ moments but not $time$. The identifiers after the underscore indicate the repspective moment of the annual $cfo$ distribution. $time$ is a yearly indicator $= year - 1989$. Variance inflation factors are reported in square brackets below the standard errors, which are clustered by country. $^{*}$/$^{**}$/$^{***}$ indicate two-sided significance levels of 10/5/1 \\%, respectively.",
+               "\\item Note: This table reports OLS regression results of running model (\\ref{time_reg}) (columns 1 and 4) and model (\\ref{full_cfo_reg}) (columns 2 and 5) for the international sample. The dependent variables in these columns are $\\beta_1$ (columns 1 and 2) and $Adj. R^2$ (columns 4 and 5) from the yearly regressions of model (\\ref{level_reg}). Columns 3 and 6 report the results for model (\\ref{resid_cfo_reg}). Both are based on residuals from a variant of model (\\ref{full_cfo_reg}) including all $CFO$ moments but not $TIME$. The dependent variable $RESID_{CFO}$ in column 3 is the residual regessing this model on the $\\beta_1$s of annual model (\\ref{level_reg}) estimations and $RESID_{Adj. R^2}$ of column 6 is the residual from regressing this model on the $Adj. R^2$s of annual model (\\ref{level_reg}) estimations. The identifiers after the underscore indicate the repspective moment of the annual $CFO$ distribution. $TIME$ is a yearly indicator $= year - 1989$. Variance inflation factors are reported in square brackets below the standard errors, which are clustered by country. $^{*}$/$^{**}$/$^{***}$ indicate two-sided significance levels of 10/5/1 \\%, respectively.",
                "\\end{tablenotes}",
                "\\end{threeparttable}",
                "\\end{table}")
 cat(paste(latex_tab, collapse = "\n"))
 ```
 
-The findings of \ref{tab: tests_world} support the notion of a time trend affecting the cash flow/accrual association internationally. To visualize this trend, Figure \ref{fig:yfe_residcfo_world_sbs} and \ref{fig:yfe_residadjr2_world_sbs} report the yearly fixed effects of a variant of model (\ref{resid_cfo_reg}) where the $time$ coefficient is being replaced with time series fixed effects. After controlling for changes in the underlying cash flow distribution the decline of the cash flow/accrual association seems to be driven by the nineties and experiences a peak during the first dot-com crisis around 2001.
+The findings of Table \ref{tab:tests_world} support the notion of a time trend affecting the cash flow/accrual association internationally. To visualize this trend, Figure \ref{fig:yfe_residcfo_world_sbs} and \ref{fig:yfe_residadjr2_world_sbs} report the yearly fixed effects of a variant of model (\ref{resid_cfo_reg}) where the $TIME$ coefficient is being replaced with time series fixed effects. After controlling for changes in the underlying cash flow distribution the decline of the cash flow/accrual association seems to be driven by the nineties and experiences a peak during the first dot-com crisis around 2001.
 
-As can be assessed by the scatter plot presented by the ExPanD tool ([click here to ExPanD](https://jgassen.shinyapps.io/ExpAcc)), this time trend seems reasonable robust across countries. In addition, the sample presented by ExPanD also includes coefficients and goodness of fit measures for the two additional cash flow/accrual models that BLZ explore: A change model (regressing change in total accruals on change in cash flow from operations) and the model developed by @DD, regressing total accruals on lagged, current and lead cash flows from operations. As can be verified by using ExPanD, we observe a consistent time trend for the adjusted $R^2$s of all models. The results for the relevant model coefficients are more dispersed. The coefficient trends are not significant at conventional levels when we use the residual coefficients as the dependent variable.
+As can be assessed by the scatter plot presented by the ExPanD tool ([click here to ExPanD](https://jgassen.shinyapps.io/ExpAcc)), this time trend seems reasonable robust across countries. In addition, the sample presented by ExPanD also includes coefficients and goodness of fit measures for the two additional cash flow/accrual models that BLZ explore: A change model (regressing change in total accruals on change in cash flow from operations) and the model developed by @DD, regressing total accruals on lagged, current and lead cash flows from operations. As can be verified by using ExPanD, we observe a consistent time trend for the adjusted $R^2$s of all models. The results for the relevant model coefficients are more dispersed.
   
   
-``` {r yfe_residcfo_world_sbs, cache = TRUE, fig.cap="\\label{fig:yfe_residcfo_world_sbs}Yearly fixed effects of a baseline model regressing $resid_{cfo}$ on $time$ for the world sample"}
+``` {r yfe_residcfo_world_sbs, cache = TRUE, fig.cap="\\label{fig:yfe_residcfo_world_sbs}Yearly fixed effects of a baseline model regressing $RESID_{cfo}$ on $TIME$ for the world sample"}
 prepare_fig_yearly_fixed_effects(ctr_year_sample, "resid_cfo")
 ```
 
-``` {r yfe_residadjr2_world_sbs, cache = TRUE, fig.cap="\\label{fig:yfe_residadjr2_world_sbs}Yearly fixed effects of a baseline model regressing $resid_{Adj. R^2}$ on $time$ for the world sample"}
+``` {r yfe_residadjr2_world_sbs, cache = TRUE, fig.cap="\\label{fig:yfe_residadjr2_world_sbs}Yearly fixed effects of a baseline model regressing $RESID_{Adj. R^2}$ on $TIME$ for the world sample"}
 prepare_fig_yearly_fixed_effects(ctr_year_sample, "resid_adjr2")
 ```
 
 # Conclusion
 
-In this research note, we showcased an open science workflow by reproducing, replicating and extending the findings of @BLZ. Turing each of our four stages (replication, robustness testing, exploration, replication and extension) we were able to generate relevant insights that help us to better understand the accrual landscape.
+In this research note, we showcased an open science workflow by reproducing, replicating and extending the findings of @BLZ. During each of our four stages (replication, robustness testing, exploration, replication and extension) we were able to generate relevant insights that help us to better understand the accrual landscape.
 
 In particular, we successfully reproduced an influential financial accounting study and showed the robustness of its key finding across industries and countries. We found that the world-wide decline of the cash flow/accrual association can largely be explained by a change in the underlying cash flow distribution over time. Towards the end of our sample period operating cash flows become significantly more dispersed and we observe a higher proportion of firm-years with large negative cash flows. For these firm-years the association between accruals and cash flows is positive, which appears to be the main explanation for the findings of BLZ. Besides this effect, which we assess to explain about 80 % of the phenomenon reported by BLZ, we document a remaining time-trend driven by the nineties that is remarkably stable around the world. 
 
@@ -499,8 +566,8 @@ To reproduce this paper and its findings, you need admin access to computational
 5. If you have a Github account, you can link RStudio to it (follow the instructions under http://happygitwithr.com/) and then fork the Github repository https://github.com/joachim-gassen/ExpAcc as a new project. Continue with step 8.
 6. If you do not have a Github account, download the ZIP-File containing the repository for this paper from https://github.com/joachim-gassen/ExpAcc and extract it on your computer (click the top right green button named "clone or download").
 7. Start RStudio. Use the file window (normally placed as a tab window in the lower right part of the screen) to navigate where you have stored the repository. Set your working directory to that directory by using "More/Set As Working Directory". You can also change the working directory in RStudio by clicking on "session" and then "Set working directory". 
-8. Open the file "produce_findings.R" in the main directory. Run all (Ctrl + A, Ctrl + Enter). This will install necessary R packages, including the ExPanDaR package, download neccessary data from WRDS, and generate all samples, tables and figures that are presented in the paper. As a last step, it will open a local version of the ExPanD app that is also available online (https://jgassen.shinyapps.io/ExpAcc/). To download the data from WRDS, it will prompt you for your WRDS username and your password. The password will not be stored. 
-9. After you downloaded the necessary data, you might want to set the variables "refresh" and "pull_wrds_data" in "produce_findings.R" to "FALSE" to avoid repulling the data. If you repull WRDS data, the old datafiles will be renamed.
+8. Open the file "produce_findings.R" in the main directory. Run all (Ctrl + A, Ctrl + Enter). This will install necessary R packages, including the ExPanDaR package, download necessary data from WRDS (takes a while), and generate all samples, tables and figures that are presented in the paper. As a last step, it will open a local version of the ExPanD app that is also available online (https://jgassen.shinyapps.io/ExpAcc/). To download the data from WRDS, it will prompt you for your WRDS username and your password. The password will not be stored. 
+9. After you downloaded the necessary data, you might want to set the variables "refresh" and "pull_wrds_data" in "produce_findings.R" to "FALSE" to avoid re-pulling the data. If you re-pull WRDS data, the old data files will be renamed.
 10. If you want to reproduce the paper itself (requires an installed Latex distribution), open the file "ExpAcc_paper.Rmd" in the paper directory and knit it (Ctrl + Shift + K, Icon in the tray above the text editor). Please note: While the code in "ExpAcc_paper.Rmd" is self-contained, it is not downloading data by default. If you have not already downloaded the data in step 8, set the variables "refresh" and "pull_wrds_data" in "ExpAcc_paper.Rmd" to "TRUE" prior to knitting the paper.
 11. Where do you go from here? A good first step would be to explore and audit the code of the repository. It is contained in the code directory. The naming of the files should be somewhat self-explanatory. As an example for what to do: Experiment with the sample screens and the outlier treatment of the respective samples.
 12. If you stumble across something interesting, please get in touch. The most efficient way to do that would be to open an issue on Github or to issue a pull request with your suggested changes. But we also cater to traditional email. Just reach out to gassen@wiwi.hu-berlin.de

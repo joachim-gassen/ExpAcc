@@ -65,32 +65,46 @@ prepare_fig_rep_blz_results <- function(ys, model, idv) {
   vars <- c("year", 
             paste0(model, "_", idv, "_est"),
             paste0(model, "_adjr2"))
+  if (model == "level")
+    model_exp <- TeX("$\\mathit{TACC}_t = \\beta_0 + \\beta_1 \\mathit{CFO}_t + \\epsilon_t", output = "text")
+  if (model == "change")
+    model_exp <- TeX("$\\Delta \\mathit{TACC}_t = \\beta_0 + \\beta_1 \\Delta \\mathit{CFO}_t + \\epsilon_t")
+  if (model == "dd")
+    model_exp <- TeX("$\\mathit{TACC}_t = \\beta_0 + \\beta_1 \\mathit{CFO}_{t-1} + \\beta_2 \\mathit{CFO}_{t} + \\beta_3 \\mathit{CFO}_{t+1} + \\epsilon_t")
+  
   res <- ys[, vars]
-  res$sample <- paste(model, "test")
+  res$sample <- "Reproduction"
 
   blz_result <- read.csv("raw_data/blz_reg_results.csv", stringsAsFactors = FALSE)
   blz_res <- blz_result[, vars]
-  blz_res$sample <- paste(model, "BLZ")
+  blz_res$sample <- "BLZ"
+
   res <- rbind(res, blz_res)
+  res <- res[complete.cases(res),]
   res$year <- as.numeric(as.character(res$year))
   
   gcfo <- ggplot(res, aes_string(x="year", y=names(res)[2], color="sample", shape="sample")) +
     geom_point(size = 2) +
     theme_bw() + guides(shape = FALSE) +
-    xlab("Year") +
-    ylab(names(res)[2]) + 
-    theme(legend.position="none")
+    xlab("Year")  + 
+    theme(legend.position="none") +
+    annotate("text", x = quantile(res$year, 0.02), 
+             y = quantile(res[,2], 0.98), hjust = 0, size = 3,
+             label = as.character(model_exp), parse = TRUE)
+
+  if (model == "dd")
+    gcfo <- gcfo + ylab(expression(beta[2])) else gcfo <- gcfo + ylab(expression(beta[1])) 
   
   gr2 <- ggplot(res, aes_string(x="year", y=names(res)[3], color="sample", shape="sample")) +
     geom_point(size = 2) +
     theme_bw()  +
     xlab("Year") +
     ylab(expression(paste("Adj. ", R^2)))  +
-    theme(legend.position = c(0.8, 0.8)) +
+    theme(legend.position = c(0.7, 0.8)) +
     scale_color_discrete("Sample") +  
     scale_shape_manual("Sample", values = 16:17)
  
-  ggarrange(gcfo, gr2, nrow = 1, ncol = 2)
+  ggarrange(gcfo, gr2, nrow = 1, ncol = 2) 
 }
 
 
@@ -208,6 +222,8 @@ prepare_fig_scatter_sbs <- function(ts) {
     labs(color ="Industry", size = "Total assets (M US-$, 2014 prices)") +
     guides(size = guide_legend(override.aes = list(alpha = 1), nrow = 5, title.position = "top"))  + 
     guides(color = guide_legend(override.aes = list(alpha = 1), nrow = 5, title.position = "top")) + 
+    xlab(TeX("\\mathit{CFO}")) +
+    ylab(TeX("\\mathit{TACC}")) +
     theme(legend.position="bottom", 
           strip.background = element_blank(),
           legend.title = element_text(size=6),
@@ -227,7 +243,9 @@ prepare_fig_cfo_density_sbs <- function(ts) {
 prepare_fig_cfo_density_ridge <- function(ts) {
   ts$year <- as.numeric(as.character(ts$year))
   ggplot(ts, aes(x = cfo, y = year, group = year)) + 
-    geom_density_ridges(rel_min_height = 0.01, alpha = 0.75) + theme_bw()
+    geom_density_ridges(rel_min_height = 0.01, alpha = 0.75) + theme_bw() +
+    xlab(TeX("\\mathit{CFO} Density")) +
+    ylab("Year")
 }
 
 prepare_fig_level_by_age <- function(ts, testvar) {
@@ -247,11 +265,11 @@ prepare_fig_time_effect_sbs <- function(e, test) {
    if (test == "cfo") {
     e <- e[order(e$base_cfo_est),]
     e <- select(e, country, matches("cfo"))
-    ylab_text <- expression(paste("Dependent Variable: ", beta[1]))
+    ylab_text <- expression(paste(b[1], ", dependent variable: ", beta[1]))
   } else {
     e <- e[order(e$base_adjr2_est),]
     e <- select(e, country, matches("adjr2"))
-    ylab_text <- expression(paste("Dependent Variable: Adj. ", R^2))
+    ylab_text <- expression(paste(b[1], ", dependent variable: Adj. ", R^2))
   }
   e$country <- factor(e$country, levels = e$country)
   e %>% 
@@ -285,6 +303,7 @@ prepare_fig_yearly_fixed_effects <- function(ys, model) {
                 cfo_kurt*country | 
                 country + year , 
               data=ys)
+    model_exp <- model
   } else if (model == "iacted_adjr2") { 
     m <- felm(level_adjr2 ~ cfo_mean*country + 
                 cfo_sd*country + 
@@ -292,14 +311,17 @@ prepare_fig_yearly_fixed_effects <- function(ys, model) {
                 cfo_kurt*country | 
                 country + year , 
               data=ys)
+    model_exp <- model
   } else if (model == "resid_cfo") {  
     m <- felm(level_resid_cfo ~ 0 | 
                 country + year , 
               data=ys)
+    model_exp <- TeX("Yearly fixed effects, dependent variable: \\mathit{RESID}_\\mathit{CFO}")
   } else if (model == "resid_adjr2") {
     m <- felm(level_resid_adjr2 ~ 0 | 
                 country + year , 
               data=ys)
+    model_exp <- TeX("Yearly fixed effects, dependent variable: \\mathit{RESID}_{Adj. R^2}")
   } else stop("Unknown model")
   
   getfe(m) %>%
@@ -312,78 +334,5 @@ prepare_fig_yearly_fixed_effects <- function(ys, model) {
     geom_col(fill = "red") +
     geom_smooth() +
     theme_bw() + xlab("Year") + 
-    ylab(paste0("Fixed effects ", model, " model"))
+    ylab(model_exp)
 }
-
-
-prepare_figure_reb_sample <- function(ws, ts) {
-  ts <- test_sample
-  ws <- reb_us
-  ws %>%
-    group_by(year) %>%
-    do(yrly_model = lm(tacc ~ cfo, data=.)) -> regm
-  
-  regm %>% 
-    glance(yrly_model) %>%
-    transmute(r2 = r.squared,
-              adjr2 = adj.r.squared) -> reb_base_r2
-  regm %>% 
-    tidy(yrly_model) %>%
-    filter(term == "cfo") %>%
-    transmute(cfoest = estimate) -> reb_base_cfoest
-  
-  ws %>%
-    group_by(year) %>%
-    do(yrly_model = lm(tacc ~ (cfo < 0) + (cfo < 0)*cfo, data=.)) -> regm
-  
-  regm %>% 
-    glance(yrly_model) %>%
-    transmute(r2 = r.squared,
-              adjr2 = adj.r.squared) -> reb_bs_r2
-  regm %>% 
-    tidy(yrly_model) %>%
-    filter(term == "cfo") %>%
-    transmute(cfoest = estimate) -> reb_bs_cfoest
-
-  ts %>%
-    group_by(year) %>%
-    do(yrly_model = lm(tacc ~ cfo, data=.)) -> regm
-  
-  regm %>% 
-    glance(yrly_model) %>%
-    transmute(r2 = r.squared,
-              adjr2 = adj.r.squared) -> base_r2
-  regm %>% 
-    tidy(yrly_model) %>%
-    filter(term == "cfo") %>%
-    transmute(cfoest = estimate) -> base_cfoest
-  
-  w_us <- cbind(inner_join(base_r2, base_cfoest), model=rep("base", 51))
-  w_us <- rbind(w_us,
-                cbind(inner_join(reb_base_r2, reb_base_cfoest), model=rep("reb_base", 51)))
-  w_us <- rbind(w_us,
-                cbind(inner_join(reb_bs_r2, reb_bs_cfoest), model=rep("reb_bs", 51)))
-  
-  w_us$year <- as.numeric(as.character(w_us$year))
-  
-  gcfo <- ggplot(w_us, aes(x=year, y=cfoest, color=model, shape=model)) +
-    geom_point(size = 2) +
-    theme_bw()  +
-    xlab("Year") +
-    ylab(expression(beta[1])) + 
-    geom_smooth() +
-    theme(legend.position="none")
-  
-  gr2 <- ggplot(w_us, aes(x=year, y=adjr2, color=model, shape=model)) +
-    geom_point(size = 2) +
-    theme_bw() +
-    xlab("Year") +
-    ylab(expression(paste("Adj. ", R^2)))  +
-    labs(color = "Sample") + 
-    labs(shape = "Sample") + 
-    geom_smooth(show.legend = FALSE) +
-    theme(legend.position = c(0.8, 0.8))
-  
-  return(ggarrange(gcfo, gr2, nrow = 1, ncol = 2))  
-}
-
