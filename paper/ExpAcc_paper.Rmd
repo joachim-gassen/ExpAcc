@@ -250,7 +250,7 @@ latex_tab <- c("\\begin{table}[!htbp]",
                "\\begin{tablenotes}[flushleft]",
                "\\setlength{\\labelsep}{0pt}",
                "\\footnotetext",
-               "\\item Note: The test sample is based on the reproduced sample reported in Table \\ref{tab:descriptives_rs}. In addition to the sampling process described there, observations with $avg\\_at$ below M US-\\$ 7.5 are excluded. Variables are as defined in Table \\ref{tab:vardef}.",
+               "\\item Note: The test sample is based on the reproduced sample reported in Table \\ref{tab:descriptives_rs}. In addition to the sampling process described there, observations with $AVGAT$ below M US-\\$ 7.5 are excluded. Variables are as defined in Table \\ref{tab:vardef}.",
                "\\end{tablenotes}",
                "\\end{threeparttable}",
                "\\end{table}")
@@ -322,7 +322,7 @@ The functional form of the cash flow-accrual relation has also been investigated
 
 # Exploration
 
-To explore the development of the functional relation of cash flows from operations and total accruals over time, we estimate locally estimated smooth regressions for yearly samples. The result can be visualized by a video ([click here to see video](https://www.dropbox.com/s/66cscjo8fcadhwa/test_samplecfo_tacc_scatter.mp4?dl=1)) or by comparing the functional forms across two samples, one spanning the beginning of the sample period (1964-1973) and one spanning the end of the sample period (2005-2014).
+To explore the development of the functional relation of cash flows from operations and total accruals over time, we estimate locally estimated smooth regressions for yearly samples. The result can be visualized by a video ([click here to see video](https://www.wiwi.hu-berlin.de/rewe/research/test_samplecfo_tacc_scatter.mp4)) or by comparing the functional forms across two samples, one spanning the beginning of the sample period (1964-1973) and one spanning the end of the sample period (2005-2014).
 
 ``` {r scatter_sbs, cache = TRUE, dev = "png", fig.height = 6, fig.cap="\\label{fig:scatter_sbs} $CFO$ and $TACC$ scatter plots (sample of 20,000 observations for each period)"}
 prepare_fig_scatter_sbs(test_sample)
