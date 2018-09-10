@@ -6,7 +6,12 @@
 install_pkg_if_missing_and_attach <- function(pkg_string) {
   lib_str <- strsplit(pkg_string, "/")[[1]][length(strsplit(pkg_string, "/")[[1]])]
   if (!require(lib_str, character.only = TRUE)) {
-    if (!grepl("/", pkg_string)) install.packages(pkg_string)
+    if (!grepl("/", pkg_string)) {
+      repos <- getOption("repos")
+      if (is.null(repos) || repos == "@CRAN@") 
+        repos <- c(CRAN = "https://cloud.r-project.org/")
+      install.packages(pkg_string, repos = repos)
+    }
     else devtools::install_github(pkg_string)
     library(lib_str, character.only = TRUE)
   }
