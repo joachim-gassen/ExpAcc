@@ -49,7 +49,7 @@ source("code/videos.R")
 # Installing packages (if not already installed) and attaching them 
 
 pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe",
-          "dplyr", "tidyr", "ExPanDaR",
+          "dplyr", "tidyr", "joachim-gassen/ExPanDaR",
           "lubridate", "broom", "tweenr", "moments",
           "Hmisc", "RCurl", "nteetor/gganimate", "scales",
           "ggridges", "latex2exp")
