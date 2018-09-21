@@ -119,6 +119,11 @@ vars_for_expand <- c(1:10, 12:13, 17, 36:37,
 int_ys_expand <- int_ys[,vars_for_expand]
 us_ys_expand <- us_ys[,vars_for_expand]
 ys_def_expand <- ys_def[vars_for_expand,]
+int_ys_expand$year <- factor(int_ys_expand$year, 
+                             levels = levels(us_ys_expand$year))
+int_ys_expand$yid <- factor(int_ys_expand$yid, 
+                            levels = levels(us_ys_expand$yid))
+
 
 ExPanD(list(int_ys = int_ys_expand, us_ys = us_ys_expand), df_def = ys_def_expand, 
        df_name = c("International country year sample", "US country year sample"),
