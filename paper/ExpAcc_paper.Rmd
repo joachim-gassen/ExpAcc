@@ -56,7 +56,8 @@ pkgs <- c("knitr", "kableExtra", "captioner",
           "Hmisc", "RCurl", "nteetor/gganimate",
           "ggridges", "latex2exp")
 
-invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
+invisible(lapply(pkgs, install_pkg_if_missing))
+invisible(lapply(pkgs, attach_pkg))
 
 opts_knit$set(root.dir = "..")
 
