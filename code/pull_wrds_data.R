@@ -17,18 +17,20 @@
 # ------------------------------------------------------------------------------
 
 
-# --- Attach packages and define functions -------------------------------------
+# --- Define functions ---------------------------------------------------------
 
 rm(list = ls())
 
 source("code/utils.R")
 
-pkgs <- c("RPostgres", "DBI",  "Hmisc", "rstudioapi", "dplyr")
-invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
+# It seems that WRDS is no longer using long variable names
+# Thus, the labeling is obsolete.
+# I leave the code for the time being in case WRDS changes
+# its mind again in the future - 22SEP2018
 
-clean_wrds_data <- function(df, var_names) {
+clean_wrds_data <- function(df, var_names, create_labels = FALSE) {
   for (n in names(df)) {
-    label(df[,n]) = n
+    if (create_labels) label(df[,n]) = n
     if (is.character(df[,n])) df[,n] <- trimws(df[,n])
   }
   names(df) <- var_names
@@ -65,6 +67,7 @@ wrds <- dbConnect(Postgres(),
                   sslmode = 'require',
                   dbname = 'wrds')
 
+message("Logged on to WRDS ...")
 
 # --- Specify filters and variables --------------------------------------------
 
@@ -101,31 +104,37 @@ ts_filter_int <- "fyear>1961"
 
 # --- Pull US data -------------------------------------------------------------
 
-res<-dbSendQuery(wrds, paste(
+message("Pulling US annual data ... ", appendLF = FALSE)
+res <- dbSendQuery(wrds, paste(
   "select", 
   us_wrds_dyn_var_str, 
   "from COMP.FUNDA",
   "where", cs_filter,
   "and", ts_filter))
 
-wrds_us_dynamic<-dbFetch(res, n=-1)
+wrds_us_dynamic <- dbFetch(res, n=-1)
 dbClearResult(res)
+message("done!")
 
+message("Pulling US static data ... ", appendLF = FALSE)
 res2<-dbSendQuery(wrds, paste(
   "select ", wrds_stat_var_str, "from COMP.COMPANY"))
 
-wrds_us_static<-dbFetch(res2,n=-1)
+wrds_us_static <- dbFetch(res2,n=-1)
 dbClearResult(res2)
+message("done!")
 
 wud <- clean_wrds_data(wrds_us_dynamic, dyn_vars)
 wus <- clean_wrds_data(wrds_us_static, stat_vars)
 
-wrds_us<-merge(wus, wud, by="gvkey")
+wrds_us <- merge(wus, wud, by="gvkey")
 save_wrds_data(wrds_us, "data/cstat_us_sample.RDS")
+
 
 # --- Pull International data --------------------------------------------------
 
-res3<-dbSendQuery(wrds, paste(
+message("Pulling international annual data ... ", appendLF = FALSE)
+res3 <- dbSendQuery(wrds, paste(
   "select",
   int_wrds_dyn_var_str,
   "from COMP.G_FUNDA",
@@ -134,12 +143,15 @@ res3<-dbSendQuery(wrds, paste(
 
 wrds_int_dynamic<-dbFetch(res3, n=-1)
 dbClearResult(res3)
+message("done!")
 
-res4<-dbSendQuery(wrds, paste(
+message("Pulling international static data ... ", appendLF = FALSE)
+res4 <- dbSendQuery(wrds, paste(
   "select ", wrds_stat_var_str, "from COMP.G_COMPANY"))
 
-wrds_int_static<-dbFetch(res4,n=-1)
+wrds_int_static <- dbFetch(res4,n=-1)
 dbClearResult(res4)
+message("done!")
 
 wintd <- clean_wrds_data(wrds_int_dynamic, dyn_vars_int)
 wints <- clean_wrds_data(wrds_int_static, stat_vars)
@@ -148,4 +160,5 @@ wrds_int<-merge(wints, wintd, by="gvkey")
 save_wrds_data(wrds_int, "data/cstat_int_sample.RDS")
 
 dbDisconnect(wrds)
+message("Disconnected from WRDS")
 

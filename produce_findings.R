@@ -14,13 +14,14 @@
 # Refer to the Appendix in the paper for additional guidance
 # ------------------------------------------------------------------------------
 
+# Start this with a virgin R session
+
 rm (list=ls())
 
-# --- Configuration -----------------------------------------------------------
+# --- Configuration ------------------------------------------------------------
 
 # Set the below to TRUE if you want repull Compustat data from WRDS 
-# This also needs to be done at least once and can also be done by sourcing
-# code/fetch_wrds_data.R directly.
+# This needs to be done at least once.
 #
 # You will be asked for your WRDS username/password.
 # Your password will not be stored.
@@ -29,12 +30,46 @@ rm (list=ls())
 pull_wrds_data <- TRUE
 
 # Set the below to TRUE when you want repull consumer price data 
-# and the iso3 country level name table (needs to be done at least once)
+# and the iso3 country level name table from the web 
+# This also needs to be done at least once.
 
 refresh <- TRUE
 
+# The code below uses a set of R packages, listed in the
+# 'pkgs' vector. These packages need to be installed to
+# your system. You have two options;
+# 
+# Option 1: use_temp_lib <- FALSE
+#
+# Recommended when you are an active R user and
+# want to work with the code. If missing, the packages will
+# be installed to your default library. This implies
+# that, if you have some of the packages already installed,
+# you might be working with older or newer versions
+# compared to my environment.
+# Option 1 is the most efficient way to install the needed 
+# packages but might affect the reproducability of the results 
+# or even prevent the code from running. If you run in 
+# problems after choosing this option, consider starting
+# over with a fresh R session and the second option.
+#
+#
+# Option 2: use_temp_lib <- TRUE
+#
+# This makes sure that R packages necessary to run the code
+# are loaded from a historic CRAN snapshop into a temporary library
+# This way the code will be based on reproducible packages and
+# packages won't interfere with your local R installation.
+# All the packages will be installed to a temporary library.
+# This implies that you will always have to run this code 
+# when opening a new R session. Installing all packages
+# will take a while.
 
-# --- Attach packages and define functions -------------------------------------
+use_temp_lib <- FALSE
+
+# --- End of Configuration - no editing needed below this line -----------------
+
+# --- Define functions ---------------------------------------------------------
 
 # The sourced files below contain functions 
 # with the main code for the analyses
@@ -45,19 +80,47 @@ source("code/tables.R")
 source("code/figures.R")
 source("code/videos.R")
 
+detach_all_pkg()
 
-# Installing packages (if not already installed) and attaching them 
+# --- Check for R environment --------------------------------------------------
+
+if (getRversion() < "3.3") stop(paste("You are running a too old R version.",
+                                      "At least version 3.3 is required."))
+
+if(use_temp_lib) {
+  temp_lib <- normalizePath(paste0(tempdir(),"/temp_lib"), winslash = "/")
+  dir.create(temp_lib)
+  .libPaths(c( temp_lib, .libPaths()))
+  options(repos = c(CRAN = "https://mran.microsoft.com/snapshot/2018-09-19"))
+  install_pkg_forced("rstudioapi")
+} else install_pkg_if_missing("rstudioapi")
+
+library(rstudioapi)
+
+if (versionInfo()$version <= "1.1.67") 
+  stop(paste("You are running a too old RStudio version.",
+             "At least version 1.1.67+ is required."))
+
+
+# --- Attach packages ----------------------------------------------------------
 
 pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe",
-          "dplyr", "tidyr", "ExPanDaR",
-          "lubridate", "broom", "tweenr", "moments",
-          "Hmisc", "RCurl", "nteetor/gganimate", "scales",
-          "ggridges", "latex2exp")
-
-invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
+          "dplyr", "tidyr", "lubridate", "broom", "tweenr", "moments",
+          "Hmisc", "RCurl", "scales", "ggridges", "latex2exp",
+          "RPostgres", "DBI",
+          "nteetor/gganimate@71da746", "joachim-gassen/ExPanDaR@11b4f4b")
 
 # Note: The dynamic title generation of the scatter videos
 # needs a forked version of gganimate
+
+# Instal packages (if not already installed) 
+# and attach them to a temporary library 
+
+if (use_temp_lib) {
+  invisible(lapply(pkgs, install_pkg_forced))
+} else invisible(lapply(pkgs, install_pkg_if_missing))
+
+invisible(lapply(pkgs, attach_pkg))
 
 
 # --- Generate samples ---------------------------------------------------------
@@ -119,6 +182,11 @@ vars_for_expand <- c(1:10, 12:13, 17, 36:37,
 int_ys_expand <- int_ys[,vars_for_expand]
 us_ys_expand <- us_ys[,vars_for_expand]
 ys_def_expand <- ys_def[vars_for_expand,]
+int_ys_expand$year <- factor(int_ys_expand$year, 
+                             levels = levels(us_ys_expand$year))
+int_ys_expand$yid <- factor(int_ys_expand$yid, 
+                            levels = levels(us_ys_expand$yid))
+
 
 ExPanD(list(int_ys = int_ys_expand, us_ys = us_ys_expand), df_def = ys_def_expand, 
        df_name = c("International country year sample", "US country year sample"),

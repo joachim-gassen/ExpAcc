@@ -2,27 +2,36 @@
 #
 # This code contains utility functions needed to produce the findings of Bierey and Gassen  
 
+install_pkg_forced <- function(pkg_string) {
+  if (!grepl("/", pkg_string)) {
+    repos <- getOption("repos")
+    if (is.null(repos) || repos == "@CRAN@") 
+      repos <- c(CRAN = "https://cloud.r-project.org/")
+    install.packages(pkg_string, repos = repos)
+  }
+  else devtools::install_github(pkg_string, force = TRUE)
+}
 
-install_pkg_if_missing_and_attach <- function(pkg_string) {
-  lib_str <- strsplit(pkg_string, "/")[[1]][length(strsplit(pkg_string, "/")[[1]])]
-  if (!require(lib_str, character.only = TRUE)) {
-    if (!grepl("/", pkg_string)) {
-      repos <- getOption("repos")
-      if (is.null(repos) || repos == "@CRAN@") 
-        repos <- c(CRAN = "https://cloud.r-project.org/")
-      install.packages(pkg_string, repos = repos)
-    }
-    else devtools::install_github(pkg_string)
-    library(lib_str, character.only = TRUE)
+
+install_pkg_if_missing <- function(pkg_string) {
+  lib_str <-  strsplit(strsplit(pkg_string, "/")[[1]][1*grepl("/", pkg_string) + 1], "@")[[1]][1]
+  if (!lib_str %in% installed.packages()[, "Package"]) {
+    install_pkg_forced(pkg_string)
   }
 } 
+
+
+attach_pkg <- function(pkg_string) {
+  lib_str <- strsplit(strsplit(pkg_string, "/")[[1]][1*grepl("/", pkg_string) + 1], "@")[[1]][1]
+  library(lib_str, character.only = TRUE, verbose = FALSE, quietly = TRUE, warn.conflicts = FALSE)
+}
 
 
 detach_all_pkg <- function() {
   basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
   package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
   package.list <- setdiff(package.list,basic.packages)
-  if (length(package.list)>0)  for (package in package.list) detach(package, character.only = TRUE)
+  if (length(package.list)>0)  for (package in package.list) detach(package, character.only = TRUE, unload = TRUE)
 }
 
 

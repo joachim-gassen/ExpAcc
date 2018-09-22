@@ -324,6 +324,7 @@ prepare_int_yearly_sample <- function(is) {
     group_by(country) %>% 
     do(augment(lm(data = ., level_cfo_est ~ cfo_mean + cfo_sd + cfo_skew + cfo_kurt), data = .)) %>%
     mutate(level_resid_cfo = .resid) %>%
+    select (-starts_with("."))  %>%
     do(augment(lm(data = ., level_adjr2 ~ cfo_mean + cfo_sd + cfo_skew + cfo_kurt), data = .)) %>%
     mutate(level_resid_adjr2 = .resid) %>%
     select(year, country, level_resid_cfo, level_resid_adjr2) -> level
