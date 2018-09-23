@@ -37,7 +37,7 @@ refresh <- TRUE
 
 # The code below uses a set of R packages, listed in the
 # 'pkgs' vector. These packages need to be installed to
-# your system. You have two options;
+# your system. You have two options.
 # 
 # Option 1: use_temp_lib <- FALSE
 #
@@ -49,7 +49,7 @@ refresh <- TRUE
 # compared to my environment.
 # Option 1 is the most efficient way to install the needed 
 # packages but might affect the reproducability of the results 
-# or even prevent the code from running. If you run in 
+# or even prevent the code from running. If you run into 
 # problems after choosing this option, consider starting
 # over with a fresh R session and the second option.
 #
