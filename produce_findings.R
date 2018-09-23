@@ -104,10 +104,9 @@ if (versionInfo()$version <= "1.1.67")
 
 # --- Attach packages ----------------------------------------------------------
 
-pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe",
-          "dplyr", "tidyr", "lubridate", "broom", "tweenr", "moments",
-          "Hmisc", "RCurl", "scales", "ggridges", "latex2exp",
-          "RPostgres", "DBI",
+pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
+          "lubridate", "broom", "tweenr", "moments", "Hmisc", "RCurl", 
+          "ggridges", "latex2exp", "RPostgres", "DBI", 
           "nteetor/gganimate@71da746", "joachim-gassen/ExPanDaR@11b4f4b")
 
 # Note: The dynamic title generation of the scatter videos

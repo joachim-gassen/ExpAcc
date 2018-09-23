@@ -49,38 +49,35 @@ source("../code/tables.R")
 source("../code/figures.R")
 source("../code/videos.R")
 
-pkgs <- c("knitr", "kableExtra", "captioner", 
-          "devtools", "Quandl", "gtools", "ggpubr", "lfe",
-          "tidyverse", "joachim-gassen/ExPanDaR",
-          "lubridate", "broom", "tweenr", "moments",
-          "Hmisc", "RCurl", "nteetor/gganimate",
-          "ggridges", "latex2exp")
+pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
+          "lubridate", "broom", "tweenr", "moments", "Hmisc", "RCurl", 
+          "ggridges", "latex2exp", "knitr", "kableExtra",  
+          "nteetor/gganimate@71da746", "joachim-gassen/ExPanDaR@11b4f4b")
 
 invisible(lapply(pkgs, install_pkg_if_missing))
 invisible(lapply(pkgs, attach_pkg))
 
 opts_knit$set(root.dir = "..")
 
-# Set the below to TRUE if you want repull Compustat data from WRDS 
-# This also needs to be done at least once and can also be done by running
-# code/fetch_wrds_data.R directly.
-#
-# You will be asked for your WRDS username/password.
-# Your password will not be stored.
+# This code relies on the WRDS and some additional data 
+# being present in the data/ directory. 
+# 
+# To make sure that this is the case, run 'produce_findings.R' 
+# in the project's root directory prior to knitting this file.
 #
 # Refer to the Appendix in the paper for additional guidance
 
-pull_wrds_data <- FALSE
-
-# Set the below to TRUE when you want repull consumer price data (needs to be done at least once)
+needed_data_files <- c("../data/cpiauscl.RDS",
+                       "../data/iso3_country_names.RDS",
+                       "../data/cstat_us_sample.RDS",
+                       "../data/cstat_int_sample.RDS")
+if (!all(file.exists(needed_data_files))) 
+  stop("Data not downloaded. Please run 'produce_findings.R prior to knitting this file")
 
 refresh <- FALSE
-
 ```
 
 ``` {r sample, include=FALSE, cache=TRUE}
-if (pull_wrds_data) source("code/pull_wrds_data.R", local = new.env())
-
 list2env(prepare_us_samples(), environment())
 list2env(prepare_int_samples(), environment())
 ```
