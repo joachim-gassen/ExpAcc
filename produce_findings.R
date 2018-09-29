@@ -148,7 +148,7 @@ prepare_fig_cfo_density_ridge(test_sample)
 tab_corr_yearly_us <- prepare_correlation_table(us_ys)
 display_html_viewer(tab_corr_yearly_us$kable_ret)
 tab_us <- prepare_tab_impact_cfo_dist_us(us_ys, model="dd", idv="cfo", 
-                                         format = "html", drop_underscore = "")
+                                         format = "html")
 display_html_viewer(tab_us[[1]]$table)
 display_html_viewer(tab_us[[2]]$table)
 
@@ -159,8 +159,7 @@ time_effects <- estimate_int_time_effect(int_ys)
 
 prepare_fig_time_effect_sbs(time_effects, "cfo")
 prepare_fig_time_effect_sbs(time_effects, "adjr2")
-tab_int <- prepare_tab_impact_cfo_dist_int(int_ys, format = "html", 
-                                           drop_underscore = "")
+tab_int <- prepare_tab_impact_cfo_dist_int(int_ys, format = "html")
 display_html_viewer(tab_int$table)
 prepare_fig_yearly_fixed_effects(int_ys, "resid_cfo")
 prepare_fig_yearly_fixed_effects(int_ys, "resid_adjr2")
