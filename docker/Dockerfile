@@ -7,7 +7,7 @@ RUN  R -e "install.packages(c('Quandl', 'gtools', 'ggpubr', 'lfe', 'tweenr', \
                             'kableExtra', 'shinycssloaders'), \
                             repos=c(CRAN = 'https://mran.microsoft.com/snapshot/2018-09-19'))" \
   && R -e "devtools::install_github('nteetor/gganimate@71da746')" \
-  && R -e "devtools::install_github('joachim-gassen/ExPanDaR@ee0cd81')"
+  && R -e "devtools::install_github('joachim-gassen/ExPanDaR@f7bb730')"
 
 # Install some additional texlife packages
 
