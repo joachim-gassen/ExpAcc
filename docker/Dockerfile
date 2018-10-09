@@ -2,11 +2,22 @@ FROM rocker/verse:3.5.1
 
 MAINTAINER Joachim Gassen "gassen@wiwi.hu-berlin.de" 
 
-RUN  R -e "install.packages(c('Quandl', 'gtools', 'ggpubr', 'lfe', 'tweenr', \
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ffmpeg curl
+
+# 2018-10-09:  
+# The package gifski (needed by gganimate) 
+# relies on rust being installed but debian does 
+# not seem to hold the cargo package
+# installing using the default script for now...
+
+RUN curl -sSf https://static.rust-lang.org/rustup.sh | sh
+  
+RUN  R -e "install.packages(c('Quandl', 'gtools', 'ggpubr', 'lfe',  \
                             'moments', 'Hmisc', 'ggridges', 'latex2exp', 'RPostgres', \
                             'kableExtra', 'shinycssloaders'), \
                             repos=c(CRAN = 'https://mran.microsoft.com/snapshot/2018-09-19'))" \
-  && R -e "devtools::install_github('nteetor/gganimate@71da746')" \
+  && R -e "devtools::install_github('thomasp85/gganimate@81e8234')" \
   && R -e "devtools::install_github('joachim-gassen/ExPanDaR@f7bb730')"
 
 # Install some additional texlife packages

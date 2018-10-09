@@ -3,7 +3,8 @@ title: Exploring the Accrual Landscape^[We appreciate feedback from Ulf Brüggem
 
 author: |
   | Martin Bierey and Joachim Gassen 
-  | Humboldt-Universität zu Berlin \vspace{2cm}
+  | Humboldt-Universität zu Berlin 
+  | \vspace{2cm}
 
 date: |
   | `r loc <- Sys.getlocale(category = "LC_TIME"); Sys.setlocale("LC_TIME", "C"); fdate <- format(Sys.time(), '%B %e, %Y'); Sys.setlocale("LC_TIME", loc); fdate` \vspace{2cm}
@@ -123,7 +124,7 @@ Another reason why the findings of BLZ are a good candidate for exploration and 
 
 ```{r vardef, paged.print=FALSE, results="asis"}
 vd <- readRDS("raw_data/blz_var_definitions.RDS")
-Variable <- paste0("$", gsub("_", "", toupper(vd[c(7:8, 11:12, 6, 5, 14), 1])), "_t$")
+Variable <- paste0("$", gsub("_", "", toupper(vd[c(7:8, 11:12, 6, 5, 14), 1])), "_{i,t}$")
 definition <- c(
   "$0.5AT_{t-1} + 0.5AT_t$",
   "$IB_t/AVGAT_t$",
@@ -185,8 +186,9 @@ We start by reproducing the sample of BLZ, thereby following the sample selectio
 t <- prepare_descriptive_table(rep_sample[, c("e", "tacc", "lagcfo", 
                                              "cfo", "leadcfo", "mv", 
                                              "bm", "sgaint")])
-rownames(t$df) <- c("$E_t$", "$TACC_t$", "$CFO_{t-1}$", "$CFO_t$", "$CFO_{t+1}$", "$MV_t$",
-                    "$BM_t$", "$SGAINT_t$")
+desc_rnames <- c("$E_{i,t}$", "$TACC_{i,t}$", "$CFO_{i,t-1}$", "$CFO_{i,t}$", "$CFO_{i,t+1}$", 
+                    "$MV_{i,t}$", "$BM_{i,t}$", "$SGAINT_{i,t}$")
+rownames(t$df) <- desc_rnames
 names(t$df)[c(5,7)] <- c("25 \\%", "75 \\%")
 kable(t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
       caption = "\\label{tab:descriptives_rs}Descriptive Statistics Reproduced Sample",
@@ -226,8 +228,7 @@ We assume that our initial Compustat data screens differ from the screens that B
 t <- prepare_descriptive_table(test_sample[, c("e", "tacc", "lagcfo", 
                                                "cfo", "leadcfo", "mv", 
                                                "bm", "sgaint")])
-rownames(t$df) <- c("$E_t$", "$TACC_t$", "$CFO_{t-1}$", "$CFO_t$", "$CFO_{t+1}$", "$MV_t$",
-                    "$BM_t$", "$SGAINT_t$")
+rownames(t$df) <- desc_rnames
 names(t$df)[c(5,7)] <- c("25 \\%", "75 \\%")
 
 kable(t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
@@ -262,7 +263,7 @@ Despite these remaining differences, we continue by reproducing the main finding
 
 \begin{equation}
 \label{level_reg}
-TACC_{t,i} = \beta_0 + \beta_1 CFO_{t,i} + \epsilon_{t,i}
+TACC_{t,i} = \beta_{0,t} + \beta_{1,t} CFO_{t,i} + \epsilon_{t,i}
 \end{equation}
 
 ```{r level_results, cache = TRUE, echo = FALSE, fig.cap="\\label{fig:level_results}Regression results for yearly estimates of model (\\ref{level_reg}) compared to results of BLZ, Table 2"}

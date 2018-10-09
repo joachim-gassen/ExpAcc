@@ -1,6 +1,13 @@
 # (C) Joachim Gassen 2018, gassen@wiwi.hu-berlin.de,see LICENSE file for details 
 #
-# This code contains utility functions needed to produce the findings of Bierey and Gassen  
+# This code contains utility data and functions needed to 
+# produce the findings of Bierey and Gassen  
+
+color_scale_ff12 <- c('#3cb44b', '#bfef45', '#4363d8', '#42d4f4', '#ffe119',
+                      '#e6194b', '#f03295', '#9a6324', '#911eb4', '#f58231',  
+                      '#000075', '#808080')
+color_scale_ff12_wo_finance <- color_scale_ff12[c(1:10, 12)] 
+
 
 install_pkg_forced <- function(pkg_string) {
   if (!grepl("/", pkg_string)) {
@@ -11,7 +18,6 @@ install_pkg_forced <- function(pkg_string) {
   }
   else devtools::install_github(pkg_string, force = TRUE)
 }
-
 
 install_pkg_if_missing <- function(pkg_string) {
   lib_str <-  strsplit(strsplit(pkg_string, "/")[[1]][1*grepl("/", pkg_string) + 1], "@")[[1]][1]
@@ -133,6 +139,14 @@ display_html_viewer <- function(raw_html) {
 }
 
 
+# from tools package
+
+file_ext <- function(x){ 
+  pos <- regexpr("\\.([[:alnum:]]+)$", x)
+  ifelse(pos > -1L, substring(x, pos + 1L), "")
+}
+
+
 coef_plot <- function(est, lb95, ub95, 
                       lb90 = NA, ub90 = NA, lb99 = NA, ub99 = NA,
                       label = seq(1, length(est)), order = "label") {
@@ -161,6 +175,11 @@ coef_plot <- function(est, lb95, ub95,
 }
 
 
+fisher_trans_r2 <-  function(x) {
+  return(0.5 * log((1+x^0.5) / (1-x^0.5)))
+}
+
+
 generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year") {
   df <- droplevels(df[complete.cases(df[,c(byvar, dvs, idvs)]), c(byvar, dvs, idvs)])
   t <- prepare_regression_table(df, dvs, idvs, byvar = byvar)
@@ -171,16 +190,29 @@ generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year") {
     se <- x$model$se
     r2 <- summary(x$model)$r.squared 
     adjr2 <- summary(x$model)$adj.r.squared 
-    data.frame(byvalue, n, t(coef), t(se), r2, adjr2, stringsAsFactors = FALSE, row.names = NULL)
+    data.frame(byvalue, n, t(coef), t(se), r2, adjr2,
+               stringsAsFactors = FALSE, row.names = NULL)
   }))
-  colnames(res) <- c(byvar, "n", "const", paste0(idvs, "_est"), "const_se", paste0(idvs, "_se"), "r2", "adjr2")
+  colnames(res) <- c(byvar, "n", "const", paste0(idvs, "_est"), 
+                     "const_se", paste0(idvs, "_se"), "r2", "adjr2")
   res <- res[-1,]
   return(res)
 }
 
 
-do_time_reg_test <- function(smp, testvar) {
-  res <- generate_byvar_regression_stats(smp, dvs="tacc", idvs="cfo", byvar="year")
+do_time_reg_test <- function(smp, model, testvar) {
+  if (model == "level") {
+    dvs = "tacc"
+    idvs = "cfo"
+  } else if (model == "change") {
+    dvs = "dtacc"
+    idvs = "dcfo"
+  } else if (model == "dd") {
+    dvs = "tacc"
+    idvs = c("lagcfo", "cfo", "leadcfo")
+  } else stop(sprintf("Unknown model '%s'", model))
+  
+  res <- generate_byvar_regression_stats(smp, dvs=dvs, idvs=idvs, byvar="year")
   res$year <- as.numeric(res$year)
   res$time <- res$year - min(res$year)
   mod <- lm(data = res, res[,testvar] ~ time) 
@@ -190,14 +222,16 @@ do_time_reg_test <- function(smp, testvar) {
 }
 
 
-test_time_reg_across_sub_samples <- function(df, byvar, testvar, silent = FALSE) {
+test_time_reg_across_sub_samples <- function(df, model, byvar, testvar, silent = FALSE) {
   for (val in levels(df[, byvar])) {
     if (!silent) cat(sprintf("Testing %s == %s ... ", byvar, val))
     my_sample <- df[df[, byvar] == val,]
     for (t in testvar) {
       if (!exists("result", inherits = FALSE))
-        result <- data.frame(test = t, byvar = val, do_time_reg_test(my_sample, t))
-      else result <- rbind(result, data.frame(test = t, byvar = val, do_time_reg_test(my_sample, t)))
+        result <- data.frame(test = t, model = model, byvar = val, 
+                             do_time_reg_test(my_sample, model, t))
+      else result <- rbind(result, data.frame(test = t, byvar = val, model = model,
+                                              do_time_reg_test(my_sample, model, t)))
     }
     if (!silent) cat("done!\n")
   }

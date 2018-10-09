@@ -59,7 +59,8 @@ prepare_us_samples <- function() {
   
   ff48 <- readRDS("raw_data/ff_48_ind.RDS")[,c(1,3)]
   ff12 <- readRDS("raw_data/ff_12_ind.RDS")[,c(1,3)]
-  ff12$ff12ind_desc <- factor(gsub(" \\(.*", "", gsub( " --.*$", "", ff12$ff12ind_desc)))
+  ff12$ff12ind_desc <- factor(gsub(" \\(.*", "", gsub( " --.*$", "", ff12$ff12ind_desc)),
+                              levels = gsub(" \\(.*", "", gsub( " --.*$", "", levels(ff12$ff12ind_desc))))
   
   cstat_sample %>%
     left_join(cpi) %>%
@@ -217,8 +218,8 @@ prepare_int_samples <- function() {
   
   ff48 <- readRDS("raw_data/ff_48_ind.RDS")[,c(1,3)]
   ff12 <- readRDS("raw_data/ff_12_ind.RDS")[,c(1,3)]
-  ff12$ff12ind_desc <- factor(gsub(" \\(.*", "", gsub( " --.*$", "", ff12$ff12ind_desc)))
-  
+  ff12$ff12ind_desc <- factor(gsub(" \\(.*", "", gsub( " --.*$", "", ff12$ff12ind_desc)),
+                              levels = gsub(" \\(.*", "", gsub( " --.*$", "", levels(ff12$ff12ind_desc))))  
   int %>%
     left_join(ff12, by = "sic") %>%
     left_join(ff48, by = "sic") %>%

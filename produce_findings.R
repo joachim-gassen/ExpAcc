@@ -105,12 +105,9 @@ if (versionInfo()$version <= "1.1.67")
 # --- Attach packages ----------------------------------------------------------
 
 pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
-          "lubridate", "broom", "tweenr", "moments", "Hmisc", "RCurl", 
-          "ggridges", "latex2exp", "RPostgres", "DBI", 
-          "nteetor/gganimate@71da746", "joachim-gassen/ExPanDaR@11b4f4b")
-
-# Note: The dynamic title generation of the scatter videos
-# needs a forked version of gganimate
+          "lubridate", "broom", "moments", "Hmisc", "RCurl", "ggridges", 
+          "latex2exp", "RPostgres", "DBI", 
+          "thomasp85/gganimate@81e8234", "joachim-gassen/ExPanDaR@f7bb730")
 
 # Instal packages (if not already installed) 
 # and attach them to a temporary library 
@@ -205,9 +202,19 @@ ExPanD(list(int_ys = int_ys_expand, us_ys = us_ys_expand), df_def = ys_def_expan
 
 # --- Prepare scatter plot video -----------------------------------------------
 
-create_scatter_video(test_sample, "BLZ replicated sample", x="cfo", y="tacc", 
-                     size="avg_at_cpi2014", size_legend="Average AT (2014 prices)",
-                     color="ff12ind", color_legend="FF 12 industry",fsize = 18,
-                     filename = "video/test_sample_cfo_tacc_scatter_3_by_2.mp4",
-                     ani.width=1500, ani.height=1000, loess = TRUE)
+p <- create_scatter_video(test_sample, "Test sample", x="cfo", y="tacc", 
+                     size="avg_at_cpi2014", 
+                     size_legend="Average AT (2014 prices, M US-$)",
+                     color="ff12ind", color_legend="Fama/French 12 industry", 
+                     loess = TRUE,
+                     filename = "video/test_sample_cfo_tacc_scatter_temp.mp4",
+                     height = 1080, width = 1920, units = "px", 
+                     nframes = 1275, fps = 25)
+
+
+# --- Additional analyses (not in the paper yet) -------------------------------
+
+prepare_fig_corr_change_by_ind(test_sample)
+prepare_rolling_bs_figure(test_sample, 10, "level", "adjr2")
+prepare_rolling_bs_figure(test_sample, 20, "dd", "adjr2")
 
