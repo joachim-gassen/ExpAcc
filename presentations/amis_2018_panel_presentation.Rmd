@@ -1,0 +1,179 @@
+---
+title: Increase Reproducibility of Research by Interactive Robustness Sections
+subtitle: |
+  |  A Step Towards Open Science in Empirical Accounting Resarch
+author: | 
+  | Joachim Gassen 
+  | Humboldt-Universität zu Berlin
+date:  |
+  | `r loc <- Sys.getlocale(category = "LC_TIME"); Sys.setlocale("LC_TIME", "C"); fdate <- format(Sys.time(), '%B %d, %Y'); Sys.setlocale("LC_TIME", loc); fdate`
+output: beamer_presentation
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{graphicx}
+- \usepackage{media9}
+- \usepackage{xcolor}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, table.align = "center", cache.lazy = FALSE, message = FALSE, error = FALSE, warning = FALSE, clean = FALSE)
+library(knitr)
+opts_knit$set(root.dir = "..", fig.pos = 'h')
+library(kableExtra)
+library(captioner)
+library(animation)
+
+install_pkg_if_missing_and_attach <- function(pkg_string) {
+  lib_str <- strsplit(pkg_string, "/")[[1]][length(strsplit(pkg_string, "/")[[1]])]
+  if (!require(lib_str, character.only = TRUE)) {
+    if (!grepl("/", pkg_string)) install.packages(pkg_string,repos = "http://cran.us.r-project.org")
+    else devtools::install_github(pkg_string)
+    library(lib_str, character.only = TRUE)
+  }
+} 
+
+pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe",
+          "tidyverse", "joachim-gassen/ExPanDaR",
+          "lubridate", "broom", "tweenr", "moments",
+          "Hmisc", "RCurl", "nteetor/gganimate", "scales")
+
+invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
+
+# Set the below to TRUE when you want repull consumer price data (needs to be done at least once)
+
+refresh <- TRUE
+
+
+# Set the below to TRUE if you want repull Compustat data from WRDS 
+# This also needs to be done at least once and can also be done by running
+# code/fetch_wrds_data.R directly.
+#
+# NOTE: code/fetch_wrds_data.R needs editing prior to sourcing!
+#
+# Refer to the Appendix in the paper for additional guidance
+
+fetch_wrds_data <- FALSE
+```
+
+``` {r utils, include=FALSE}
+source("code/utils.R")
+source("code/samples.R")
+source("code/tables.R")
+source("code/figures.R")
+source("code/videos.R")
+```
+
+``` {r sample, include=FALSE, cache=TRUE}
+if (fetch_wrds_data) source("code/fetch_wrds_data.R", local = new.env())
+
+list2env(prepare_us_samples(), environment())
+list2env(prepare_int_samples(), environment())
+us_ys <- prepare_us_yearly_sample(test_sample)
+int_ys <- prepare_int_yearly_sample(all20_ctry_sample)
+```
+
+# Motivation
+
+## We publish many significant studies \dots
+
+\begin{center}
+\includegraphics[height=0.7\textheight]{../media/fanelli_2010_PLoS_one.jpg} \\
+Fanelli (PLoS one, 2010)
+\end{center}
+
+
+## \dots but face a replication crisis
+
+\begin{center}
+\includegraphics[width=0.8\textwidth]{../media/osc_science_2015.jpg} \\
+Open Science Collaboration (Science, 2015)
+\end{center}
+
+
+## Data and code repositories are on the rise \dots
+
+\begin{center}
+\includegraphics[width=0.8\textwidth]{../media/gertler_galiani_romero_nature_fig1_2018.jpg} \\
+Gertler, Galiani and Romero (Nature, 2018)
+\end{center}
+
+
+## \dots but often fail to guarantee reproducible results
+
+\begin{center}
+\includegraphics[height=0.8\textheight]{../media/gertler_galiani_romero_nature_fig2_2018.jpg} \\
+Gertler, Galiani and Romero (Nature, 2018)
+\end{center}
+
+# Case Study
+
+## Bushman, Lerman and Zhang (JAR, 2016)
+
+\begin{equation}
+\label{level_reg}
+TACC = \beta_0 + \beta_1 CFO + \epsilon
+\end{equation}
+
+```{r fig_blz_results, cache = TRUE, echo = FALSE, out.height="6cm", fig.align="center"}
+prepare_fig_blz_results()
+```
+
+## Explanations explored by BLZ
+
+\setlength{\itemsep}{\fill}
+
+1. Increase in cash flows/economic earnings volatility \textcolor{red}{\text{\sffamily X}}
+2. Increase of non-timing-related accruals \textcolor{green}{\checkmark}
+3. Poorer matching of revenues and expenses  \textcolor{red}{\text{\sffamily X}}
+4. Increasing importance of intangible intensive firms  \textcolor{red}{\text{\sffamily X}}
+5. Accruals increasingly reflect the timely loss recognition rule  \textcolor{red}{\text{\sffamily X}}
+
+# Reproduction
+
+## Key finding of BLZ reproduces well
+
+\begin{equation}
+TACC = \beta_0 + \beta_1 CFO + \epsilon \tag{\ref{level_reg} revisited}
+\end{equation}
+
+```{r fig_level_results, cache = TRUE, echo = FALSE, out.height="6cm", fig.align="center"}
+prepare_fig_rep_blz_results(us_ys, "level", "cfo")
+```
+
+# Exploration
+
+## $CFO$ $TACC$ association over time
+
+\includemedia[
+  width=\textwidth, height=0.67\textwidth, keepaspectratio,
+   activate=pageopen,
+ addresource=test_sample_cfo_tacc_scatter_3_by_2.mp4,
+ flashvars={source=test_sample_cfo_tacc_scatter_3_by_2.mp4
+ &loop=true
+    }
+ ]{}{VPlayer.swf}
+
+## Expand BLZ: [https://jgassen.shinyapps.io/expacc/](https://jgassen.shinyapps.io/expacc/)
+
+\begin{center}
+\includegraphics[width=\textwidth]{../media/blz_table_4.jpg} \\
+BLZ (JAR, 2016)
+\end{center}
+
+# Conclusion
+
+## Conclusion
+
+* Many studies in empirical archival accounting are designed as if they would provide confirmatory evidence while they actually provide exploratory evidence.
+* This implies that they fail to realize all of their exploratory potential
+* Visuals make data shine 
+* Open source and data allow us to progress faster
+* Interactive robustness checking helps to provide some benefits of replications at very low cost
+
+## Links
+
+* Code: [https://github.com/joachim-gassen/ExpAcc](https://github.com/joachim-gassen/ExpAcc)
+* R Package: [https://joachim-gassen.github.io/ExPanDaR/](https://joachim-gassen.github.io/ExPanDaR/)
+* Expand: [https://jgassen.shinyapps.io/expacc/](https://jgassen.shinyapps.io/expacc/)
+* Blog: [http://arc.eaa-online.org/blog/interactive-robustness-sections-step-towards-open-science](http://arc.eaa-online.org/blog/interactive-robustness-sections-step-towards-open-science)

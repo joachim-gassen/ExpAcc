@@ -1,0 +1,4 @@
+<hr><p>
+This web app has been prepared for the <a href=http://www.amis.ase.ro/workprog.html>IAAER and ACCA Early Career Researchers Workshop</a> which is being held in conjunction with the <a href="http://www.amis.ase.ro">AMIS 2018 Conference</a>.
+<p>
+It showcases financial accounting data for a sample of publicly listed firms from 18 Central and Eastern European countries, covering fiscal years 2000 to 2016. Data is provided by Compustat and used on this page with permission. Enjoy exploring!

@@ -1,0 +1,73 @@
+---
+title: How to Explore Your Data
+subtitle: |
+  |  IAAER and ACCA
+  | Early Career Researchers Workshop
+  | in conjunction with the AMIS 2018 Conference
+author: | 
+  | Joachim Gassen 
+  | Humboldt-Universität zu Berlin
+date:  |
+  | `r loc <- Sys.getlocale(category = "LC_TIME"); Sys.setlocale("LC_TIME", "C"); fdate <- format(Sys.time(), '%B %d, %Y'); Sys.setlocale("LC_TIME", loc); fdate`
+output: beamer_presentation
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{graphicx}
+- \usepackage{media9}
+- \usepackage{xcolor}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, table.align = "center", cache.lazy = FALSE, message = FALSE, error = FALSE, warning = FALSE, clean = FALSE)
+library(knitr)
+opts_knit$set(root.dir = "..", fig.pos = 'h')
+library(kableExtra)
+
+install_pkg_if_missing_and_attach <- function(pkg_string) {
+  lib_str <- strsplit(pkg_string, "/")[[1]][length(strsplit(pkg_string, "/")[[1]])]
+  if (!require(lib_str, character.only = TRUE)) {
+    if (!grepl("/", pkg_string)) install.packages(pkg_string,repos = "http://cran.us.r-project.org")
+    else devtools::install_github(pkg_string)
+    library(lib_str, character.only = TRUE)
+  }
+} 
+
+pkgs <- c("tidyverse", "joachim-gassen/ExPanDaR",
+          "lubridate")
+
+invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
+
+```
+
+## Exploratory data analysis
+
+\begin{center}
+\includegraphics[width=\textwidth]{../media/ijgi-06-00368-g001.png} \\
+Ma et al. (IJGI, 2017)
+\end{center}
+
+## Our Case
+
+* Compustat Global data, public firms from 18 Central and Eastern European countries, 2000-2016
+* Fama French industry classifiers and four variables
+    $$
+    \begin{aligned} 
+      logat &= log(at) \\
+      cfoa &= oancf/lag(at) \\ 
+      accoa &= (ib - oancf)/lag(at) \\ 
+      iboa &= ib/lag(at) 
+    \end{aligned}
+    $$
+    * at: Total assets (M US-$)
+    * oancf: Operating cash flow (M US-$)
+    * ib: Income before extraordinary items (M US-$)
+* How is profitability distributed and related to countries, industries and size? How are cash flows and accruals related? 
+* ExPanD: [https://jgassen.shinyapps.io/ExPanD_amis2018](https://jgassen.shinyapps.io/ExPanD_amis2018)
+
+## Links
+
+* ExPanD your own data: [https://jgassen.shinyapps.io/expand](https://jgassen.shinyapps.io/expand)
+* R Package and documentation: [https://joachim-gassen.github.io/ExPanDaR/](https://joachim-gassen.github.io/ExPanDaR/)
+* Blog: [http://arc.eaa-online.org/blog/interactive-robustness-sections-step-towards-open-science](http://arc.eaa-online.org/blog/interactive-robustness-sections-step-towards-open-science)
+* R textbook, chapter on EDA: [http://r4ds.had.co.nz/exploratory-data-analysis.html](http://r4ds.had.co.nz/exploratory-data-analysis.html) 
