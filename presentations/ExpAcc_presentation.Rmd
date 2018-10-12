@@ -30,7 +30,7 @@ library(captioner)
 library(animation)
 
 install_pkg_if_missing_and_attach <- function(pkg_string) {
-  lib_str <- strsplit(pkg_string, "/")[[1]][length(strsplit(pkg_string, "/")[[1]])]
+  lib_str <-  strsplit(strsplit(pkg_string, "/")[[1]][1*grepl("/", pkg_string) + 1], "@")[[1]][1]
   if (!require(lib_str, character.only = TRUE)) {
     if (!grepl("/", pkg_string)) install.packages(pkg_string)
     else devtools::install_github(pkg_string)
@@ -38,11 +38,10 @@ install_pkg_if_missing_and_attach <- function(pkg_string) {
   }
 } 
 
-pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe",
-          "tidyverse", "joachim-gassen/ExPanDaR",
-          "lubridate", "broom", "tweenr", "moments",
-          "Hmisc", "RCurl", "nteetor/gganimate", "scales",
-          "latex2exp", "stringr")
+pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
+          "lubridate", "broom", "moments", "Hmisc", "RCurl", "ggridges", 
+          "latex2exp", "RPostgres", "DBI",
+          "thomasp85/gganimate@81e8234", "joachim-gassen/ExPanDaR@f7bb730")
 
 invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
 
@@ -80,16 +79,20 @@ int_ys <- prepare_int_yearly_sample(all20_ctry_sample)
 ```
 
 ``` {r scatter_video, include=FALSE, cache=TRUE}
-create_scatter_video(test_sample, "Test sample", x="cfo", y="tacc", 
-                     size="avg_at_cpi2014", size_legend="Average AT (2014 prices)",
-                     color="ff12ind", color_legend="FF 12 industry", fsize = 18,
-                     filename = "presentations/test_sample_cfo_tacc_scatter_3_by_2.mp4",
-                     ani.width=1500, ani.height=1000, loess = TRUE)
+if (!file.exists("presentations/test_sample_cfo_tacc_scatter_3x2.mp4")) {
+  p <- create_scatter_video(test_sample, "Test sample", x="cfo", y="tacc", 
+                            size="avg_at_cpi2014", 
+                            size_legend="Average AT (2014 prices, M US-$)",
+                            color="ff12ind", color_legend="Fama/French 12 industry", 
+                            loess = TRUE,
+                            filename = "presentations/test_sample_cfo_tacc_scatter_3x2.gif",
+                            height = 1000, width = 1500, units = "px", fsize = 24, 
+                            nframes = 100, fps = 25)
+} 
 ```
 
 
 # Motivation
-
 
 ## We face a replication crisis
 
@@ -305,12 +308,10 @@ prepare_fig_level_comp(test_sample, "cfo")
 ## $CFO$ $TACC$ association over time
 
 \includemedia[
-  width=\textwidth, height=0.67\textwidth, keepaspectratio,
-   activate=pageopen,
- addresource=test_sample_cfo_tacc_scatter_3_by_2.mp4,
- flashvars={source=test_sample_cfo_tacc_scatter_3_by_2.mp4
- &loop=true
-    }
+  width = \textwidth, height = 0.666\textwidth, passcontext,
+  addresource=test_sample_cfo_tacc_scatter_3x2.mp4,
+  deactivate=onclick,
+  flashvars={source=test_sample_cfo_tacc_scatter_3x2.mp4}
  ]{}{VPlayer.swf}
 
  
