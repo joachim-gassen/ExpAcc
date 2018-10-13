@@ -15,10 +15,9 @@ RUN curl -sSf https://static.rust-lang.org/rustup.sh | sh
   
 RUN  R -e "install.packages(c('Quandl', 'gtools', 'ggpubr', 'lfe',  \
                             'moments', 'Hmisc', 'ggridges', 'latex2exp', 'RPostgres', \
-                            'kableExtra', 'shinycssloaders'), \
-                            repos=c(CRAN = 'https://mran.microsoft.com/snapshot/2018-09-19'))" \
-  && R -e "devtools::install_github('thomasp85/gganimate@81e8234')" \
-  && R -e "devtools::install_github('joachim-gassen/ExPanDaR@f7bb730')"
+                            'kableExtra', 'shinycssloaders', 'ExPanDaR'), \
+                            repos=c(CRAN = 'https://mran.microsoft.com/snapshot/2018-10-13'))" \
+  && R -e "devtools::install_github('thomasp85/gganimate@81e8234')"
 
 # Install some additional texlife packages
 

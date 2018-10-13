@@ -91,7 +91,7 @@ if(use_temp_lib) {
   temp_lib <- normalizePath(paste0(tempdir(),"/temp_lib"), winslash = "/")
   dir.create(temp_lib)
   .libPaths(c( temp_lib, .libPaths()))
-  options(repos = c(CRAN = "https://mran.microsoft.com/snapshot/2018-09-19"))
+  options(repos = c(CRAN = "https://mran.microsoft.com/snapshot/2018-10-13"))
   install_pkg_forced("rstudioapi")
 } else install_pkg_if_missing("rstudioapi")
 
@@ -106,8 +106,8 @@ if (versionInfo()$version <= "1.1.67")
 
 pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
           "lubridate", "broom", "moments", "Hmisc", "RCurl", "ggridges", 
-          "latex2exp", "RPostgres", "DBI", 
-          "thomasp85/gganimate@81e8234", "joachim-gassen/ExPanDaR@f7bb730")
+          "latex2exp", "RPostgres", "DBI", "ExPanDaR",
+          "thomasp85/gganimate@81e8234")
 
 # Instal packages (if not already installed) 
 # and attach them to a temporary library 

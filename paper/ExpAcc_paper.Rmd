@@ -52,8 +52,8 @@ source("../code/videos.R")
 
 pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
           "lubridate", "broom", "tweenr", "moments", "Hmisc", "RCurl", 
-          "ggridges", "latex2exp", "knitr", "kableExtra",  
-          "nteetor/gganimate@71da746", "joachim-gassen/ExPanDaR@11b4f4b")
+          "ggridges", "latex2exp", "knitr", "kableExtra", "ExPanDaR", 
+          "nteetor/gganimate@71da746")
 
 invisible(lapply(pkgs, install_pkg_if_missing))
 invisible(lapply(pkgs, attach_pkg))
