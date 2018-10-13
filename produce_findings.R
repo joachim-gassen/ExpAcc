@@ -170,10 +170,10 @@ ys_def <- readRDS("raw_data/ys_def.RDS")
 config_int <- readRDS("raw_data/exp_acc_config_int.RDS")
 config_us <- readRDS("raw_data/exp_acc_config_us.RDS")
 
-vars_for_expand <- c(1:10, 12:13, 17, 36:37,
-                     19:20, 24, 38:39,
-                     26:29, 35, 40:41,
-                     42:44)
+vars_for_expand <- c(1:11, 13:14, 18, 37:38,
+                     20:21, 25, 39:40,
+                     27:30, 36, 41:42,
+                     43:45)
 int_ys_expand <- int_ys[,vars_for_expand]
 us_ys_expand <- us_ys[,vars_for_expand]
 ys_def_expand <- ys_def[vars_for_expand,]
@@ -207,7 +207,7 @@ p <- create_scatter_video(test_sample, "Test sample", x="cfo", y="tacc",
                      size_legend="Average AT (2014 prices, M US-$)",
                      color="ff12ind", color_legend="Fama/French 12 industry", 
                      loess = TRUE,
-                     filename = "video/test_sample_cfo_tacc_scatter_temp.mp4",
+                     filename = "video/test_sample_cfo_tacc_scatter_1920x1080.mp4",
                      height = 1080, width = 1920, units = "px", 
                      nframes = 1275, fps = 25)
 

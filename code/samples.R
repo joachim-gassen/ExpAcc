@@ -135,7 +135,8 @@ prepare_us_yearly_sample <- function(ts) {
     group_by(gvkey) %>%
     mutate(lagdcfo = mleadlag(dcfo, -1, year)) %>%
     group_by(year) %>%
-    summarise(cfo_mean = mean(cfo),
+    summarise(nobs = n(),
+              cfo_mean = mean(cfo),
               cfo_sd = sd(cfo),
               cfo_skew = skewness(cfo),
               cfo_kurt = kurtosis(cfo),
@@ -175,7 +176,7 @@ prepare_us_yearly_sample <- function(ts) {
   ys$country <- as.factor("USA")
   ys$cid <- ys$country 
   ys$yid <- ys$year
-  ys <- ys[, c(42, 1:41, 43, 44)]
+  ys <- ys[, c(43, 1:42, 44, 45)]
   
   return(as.data.frame(ys))
 }
@@ -301,7 +302,8 @@ prepare_int_yearly_sample <- function(is) {
   is %>% group_by(country, gvkey) %>%
     mutate(lagdcfo = mleadlag(dcfo, -1, year)) %>%
     group_by(country, year) %>%
-    summarise(cfo_mean = mean(cfo),
+    summarise(nobs = n(),
+              cfo_mean = mean(cfo),
               cfo_sd = sd(cfo),
               cfo_skew = skewness(cfo),
               cfo_kurt = kurtosis(cfo),
@@ -355,7 +357,7 @@ prepare_int_yearly_sample <- function(is) {
   cys$time <- as.numeric(as.character(cys$year)) - min(as.numeric(as.character(cys$year)))
   cys$cid <- cys$country 
   cys$yid <- cys$year
-  cys <- cys[,-11]
+  cys <- cys[,-12]
 
   return(as.data.frame(cys))
 }
