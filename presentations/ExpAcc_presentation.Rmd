@@ -1,0 +1,456 @@
+---
+title: Exploring the Accrual Landscape
+author: | 
+  | Martin Bierey and Joachim Gassen 
+  | Humboldt-Universität zu Berlin
+date:  |
+  | `r loc <- Sys.getlocale(category = "LC_TIME"); Sys.setlocale("LC_TIME", "C"); fdate <- format(Sys.time(), '%B %d, %Y'); Sys.setlocale("LC_TIME", loc); fdate`
+  | Interim Version
+  
+output: 
+  beamer_presentation
+
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{graphicx}
+- \usepackage{media9}
+- \usepackage{xcolor}
+- \usepackage{array}
+- \setbeamertemplate{itemize subitem}{-}
+- \titlegraphic{\includegraphics[width=2cm]{../media/husiegel_bw}}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, table.align = "center", cache.lazy = FALSE, message = FALSE, error = FALSE, warning = FALSE, clean = FALSE)
+library(knitr)
+opts_knit$set(root.dir = "..", fig.pos = 'h')
+library(kableExtra)
+library(captioner)
+library(animation)
+
+install_pkg_if_missing_and_attach <- function(pkg_string) {
+  lib_str <-  strsplit(strsplit(pkg_string, "/")[[1]][1*grepl("/", pkg_string) + 1], "@")[[1]][1]
+  if (!require(lib_str, character.only = TRUE)) {
+    if (!grepl("/", pkg_string)) install.packages(pkg_string)
+    else devtools::install_github(pkg_string)
+    library(lib_str, character.only = TRUE)
+  }
+} 
+
+pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
+          "lubridate", "broom", "moments", "Hmisc", "RCurl", "ggridges", 
+          "latex2exp", "RPostgres", "DBI",
+          "thomasp85/gganimate@81e8234", "joachim-gassen/ExPanDaR@f7bb730")
+
+invisible(lapply(pkgs, install_pkg_if_missing_and_attach))
+
+# This code relies on the WRDS and some additional data 
+# being present in the data/ directory. 
+# 
+# To make sure that this is the case, run 'produce_findings.R' 
+# in the project's root directory prior to knitting this file.
+#
+# Refer to the Appendix in the paper for additional guidance
+
+needed_data_files <- c("../data/cpiauscl.RDS",
+                       "../data/iso3_country_names.RDS",
+                       "../data/cstat_us_sample.RDS",
+                       "../data/cstat_int_sample.RDS")
+if (!all(file.exists(needed_data_files))) 
+  stop("Data not downloaded. Please run 'produce_findings.R prior to knitting this file")
+
+refresh <- FALSE
+```
+
+``` {r utils, include=FALSE}
+source("code/utils.R")
+source("code/samples.R")
+source("code/tables.R")
+source("code/figures.R")
+source("code/videos.R")
+```
+
+``` {r sample, include=FALSE, cache=TRUE}
+list2env(prepare_us_samples(), environment())
+list2env(prepare_int_samples(), environment())
+us_ys <- prepare_us_yearly_sample(test_sample)
+int_ys <- prepare_int_yearly_sample(all20_ctry_sample)
+```
+
+``` {r scatter_video, include=FALSE, cache=TRUE}
+if (!file.exists("presentations/test_sample_cfo_tacc_scatter_3x2.mp4")) {
+  p <- create_scatter_video(test_sample, "Test sample", x="cfo", y="tacc", 
+                            size="avg_at_cpi2014", 
+                            size_legend="Average AT (2014 prices, M US-$)",
+                            color="ff12ind", color_legend="Fama/French 12 industry", 
+                            loess = TRUE,
+                            filename = "presentations/test_sample_cfo_tacc_scatter_3x2.gif",
+                            height = 1000, width = 1500, units = "px", fsize = 24, 
+                            nframes = 100, fps = 25)
+} 
+```
+
+
+# Motivation
+
+## We face a replication crisis
+
+\begin{center}
+\includegraphics[width=\textwidth]{../media/osc_science_2015.jpg} \\
+Open Science Collaboration (Science, 2015)
+\end{center}
+
+
+## Data and code repositories are on the rise \dots
+
+\begin{center}
+\includegraphics[width=0.8\textwidth]{../media/gertler_galiani_romero_nature_fig1_2018.jpg} \\
+Gertler, Galiani and Romero (Nature, 2018)
+\end{center}
+
+
+## \dots but yet fail to guarantee reproducable results
+
+\begin{center}
+\includegraphics[height=0.8\textheight]{../media/gertler_galiani_romero_nature_fig2_2018.jpg} \\
+Gertler, Galiani and Romero (Nature, 2018)
+\end{center}
+
+
+## Bushman, Lerman and Zhang (JAR, 2016)
+
+\begin{equation}
+\label{level_reg}
+TACC_{i,t} = \beta_{0,t} + \beta_{1,t} CFO_{i,t} + \epsilon_{i,t}
+\end{equation}
+
+```{r fig_blz_results, cache = TRUE, echo = FALSE, out.height="6cm", fig.align="center"}
+prepare_fig_blz_results()
+```
+
+
+## Explanations explored by BLZ
+
+\setlength{\itemsep}{\fill}
+
+1. Increase in cash flows/economic earnings volatility \textcolor{red}{\text{\sffamily X}}
+2. Increase of non-timing-related accruals \textcolor{green}{\checkmark}
+3. Poorer matching of revenues and expenses  \textcolor{red}{\text{\sffamily X}}
+5. Increasing importance of intangible intensive firms  \textcolor{red}{\text{\sffamily X}}
+5. Accruals increasingly reflect the timely loss recognition rule  \textcolor{red}{\text{\sffamily X}}
+
+
+## [Key analysis of BLZ](https://jgassen.shinyapps.io/expacc/)
+
+\begin{center}
+\includegraphics[width=\textwidth]{../media/blz_table_4.jpg} \\
+BLZ (JAR, 2016)
+\end{center}
+
+
+# Reproduction
+
+## Variable definitions
+
+```{r vardef, cache = TRUE, results="asis", echo = FALSE}
+vd <- readRDS("raw_data/blz_var_definitions.RDS")
+Variable <- paste0("$", gsub("_", "", toupper(vd[c(7:8, 11:12, 6, 5, 14), 1])), "_{i,t}$")
+definition <- c(
+  "$0.5AT_{t-1} + 0.5AT_t$",
+  "$IB_t/AVGAT_t$",
+  "If $(year > 1987)$ $(IBC_t - OANCF_t) / AVGAT_t$ else $(ACT_t - ACT_{t-1} - (CHE_{t} - CHE_{t-1}) - ((LCT_t - LAG_{t-1}) - (DLC_t - DLC_{t-1})) - DP_t) / AVGAT_t$",
+  "If $(year > 1987)$ $OANCF_t / AVGAT_t$ else $E_t - TACC_t$",
+  "$PRCCF_t * CSHO_t$",
+  "$CEQ_t / MV_t$",
+  "$XSGA_t /(SALE_t - IB_t)$"
+  )
+  
+Description <- c(
+  "Average total assets in M US-\\$",
+  "Earnings deflated by average total assets",
+  "Total accruals, derived from earnings and cash flow from operations as reported in the cash flow statement after 1987 and from the balance sheet before, deflated by average total assets",
+  "Cash flow from operations, as reported in the cash flow statement after 1987 and derived from the balance sheet before, deflated by average total assets",
+  "Market value of common stock in M US-\\$",
+  "Book-to-market ratio based on common stock",
+  "SG\\&A Intenisty: Share of total cost that can be attributed to selling, general and administrative expenses"
+)
+
+vt <- data.frame(Variable, definition, Description, stringsAsFactors = FALSE)
+names(vt)[2] <- 'Compustat definition'
+
+kable(vt, format = "latex",
+      row.names = FALSE, booktabs = TRUE, escape = FALSE, linesep = "") -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+lat_tab[5] <- "\\toprule"
+new_lat_tab <- lat_tab[1:5]
+for (i in 6:12) {
+  new_lat_tab[2*i - 6] <- lat_tab[i]
+  if (i != 12) new_lat_tab[2*i - 5] <- "\\midrule"
+}
+new_lat_tab <- c(new_lat_tab, lat_tab[13:length(lat_tab)])
+
+latex_tab <- c("\\resizebox{\\textwidth}{!}{",
+               "\\begin{tabular}{l>{\\raggedright}p{6cm}p{8cm}}",
+               new_lat_tab[3:length(new_lat_tab)],
+               "}")
+cat(paste(latex_tab, collapse = "\n"))  
+```
+
+
+## Original BLZ sample
+
+\includegraphics[width=1\textwidth]{../media/blz_table_1_panel_a.jpg}
+
+
+## Our first try
+
+```{r descriptives_rs, cache = TRUE, echo = FALSE, results="asis"}
+t <- prepare_descriptive_table(rep_sample[, c("e", "tacc", "lagcfo", 
+                                             "cfo", "leadcfo", "mv", 
+                                             "bm", "sgaint")])
+desc_rnames <- c("$E_{i,t}$", "$TACC_{i,t}$", "$CFO_{i,t-1}$", "$CFO_{i,t}$", "$CFO_{i,t+1}$", 
+                    "$MV_{i,t}$", "$BM_{i,t}$", "$SGAINT_{i,t}$")
+rownames(t$df) <- desc_rnames 
+names(t$df)[c(5,7)] <- c("25 \\%", "75 \\%")
+kable(t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
+      format.args = list(decimal.mark = ".", big.mark = ",", 
+                         scientific=FALSE),
+      booktabs = TRUE, escape = FALSE, linesep = "") -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+
+latex_tab <- c("\\resizebox{\\textwidth}{!}{",
+               lat_tab[2:length(lat_tab)],
+               "}")
+
+cat(paste(latex_tab, collapse = "\n"))  
+
+```
+
+
+## After excluding obs with $AVGAT <$ M US-\$ 7.5
+
+```{r descriptives_ts, cache = TRUE, echo = FALSE, out.width = "\\textwidth", results="asis"}
+
+t <- prepare_descriptive_table(test_sample[, c("e", "tacc", "lagcfo", 
+                                               "cfo", "leadcfo", "mv", 
+                                               "bm", "sgaint")])
+rownames(t$df) <- desc_rnames 
+names(t$df)[c(5,7)] <- c("25 \\%", "75 \\%")
+
+kable(t$df, digits = c(0, 3, 3, 3, 3, 3, 3, 3), format = "latex",
+      format.args = list(decimal.mark = ".", big.mark = ",", 
+                         scientific=FALSE),
+      booktabs = TRUE, linesep = "", escape = FALSE) -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+
+latex_tab <- c("\\resizebox{\\linewidth}{!}{",
+               lat_tab[2:length(lat_tab)],
+              "}")
+cat(paste(latex_tab, collapse = "\n"))  
+
+```
+
+
+## Key finding of BLZ replicates well
+
+\begin{equation}
+TACC_{t,i} = \beta_{0,t} + \beta_{1,t} CFO_{t,i} + \epsilon_{t,i} \tag{\ref{level_reg} revisited}
+\end{equation}
+
+```{r fig_level_results, cache = TRUE, echo = FALSE, out.height="6cm", fig.align="center"}
+prepare_fig_rep_blz_results(us_ys, "level", "cfo")
+```
+
+# Robustness
+
+## Base model
+
+\begin{equation}
+  \label{time_reg}
+  \beta_{1,t} = b_0 +b_1 TIME_t +\epsilon_t
+\end{equation}
+
+
+## Result is stable across size deciles
+
+``` {r fig_level_by_at, cache = TRUE, echo = FALSE}
+prepare_fig_level_by_at(test_sample, "cfo_est")
+```
+
+
+## Result is stable across industries
+
+``` {r fig_level_by_ind, cache = TRUE, echo = FALSE}
+prepare_fig_level_by_ind(test_sample, "cfo_est")
+```
+
+
+## Result is not stable across $CFO$ deciles
+
+``` {r fig_level_by_cfo, cache = TRUE, echo = FALSE}
+prepare_fig_level_by_cfo(test_sample, "cfo_est")
+```
+
+
+## $\beta_1$ and Adj. $R^2$ time trends by $CFO$ deciles
+
+``` {r fig_level_by_cfo_comp, cache = TRUE, echo = FALSE}
+prepare_fig_level_comp(test_sample, "cfo")
+```
+
+
+# Exploration
+
+## $CFO$ $TACC$ association over time
+
+\includemedia[
+  width = \textwidth, height = 0.666\textwidth, passcontext,
+  addresource=test_sample_cfo_tacc_scatter_3x2.mp4,
+  deactivate=onclick,
+  flashvars={source=test_sample_cfo_tacc_scatter_3x2.mp4}
+ ]{}{VPlayer.swf}
+
+ 
+## $\beta_1$ and $CFO\_SD$ by $year$
+
+``` {r fig_ys_sbs, cache = TRUE, echo = FALSE, out.height="6cm", fig.align="center"}
+prepare_fig_ys_sbs(us_ys)
+```
+
+
+## Effect of $CFO$ distribution on time trend
+
+``` {r tab_dist_tests_cfo, cache = TRUE, echo = FALSE, results = "asis"}
+dist_test <- prepare_tab_impact_cfo_dist_us(us_ys)
+dist_test[[1]]$table[12] <- "\\\\[-1.8ex] & $\\beta_1$ & $\\beta_1$ & $\\beta_1$ & $\\beta_1$ & $\\beta_1$ & $\\beta_1$ & $RESID_{CFO}$ \\\\ "
+
+latex_tab <- c("\\begin{center}",
+               "\\resizebox*{!}{0.8\\textheight}{",
+               "\\begin{tabular}{lcccccccc}",
+               dist_test[[1]]$table[8:14],
+               toupper(sub(pattern = "(\\b[a-zA-Z\\\\_]+\\b)", "$\\1$", dist_test[[1]]$table[15:31])),
+               dist_test[[1]]$table[32:(length(dist_test[[1]]$table) - 3)],
+               "\\end{tabular}}",
+               "\\end{center}")
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+## [The table missing from BLZ $(n = 51)$](https://jgassen.shinyapps.io/expacc)
+
+``` {r corr_yearly_us_sample, cache = TRUE, echo = FALSE, results="asis"}
+tab <- prepare_correlation_table(us_ys[,c(3:8, 13, 17, 36, 37, 42)], 
+                                 format = "latex", booktabs = TRUE, linesep = "")
+tab$kable_ret <- gsub("%", "\\%", tab$kable_ret)
+tab$kable_ret <- gsub("_", "\\\\_", tab$kable_ret)
+lat_tab <- unlist(strsplit(tab$kable_ret, "\n"))
+lat_tab[7:17] <- sub("(\\b[a-zA-Z2\\\\_]{2,}\\b)", "\\U$\\1$", lat_tab[7:17], perl = TRUE)
+lat_tab[13] <- sub("\\$.*\\$", "$\\\\beta_1$", lat_tab[13])
+lat_tab[14] <- sub("\\$.*\\$", "$Adj. R^2$", lat_tab[14])
+lat_tab[15] <- sub("\\$.*\\$", "$RESID_{CFO}$", lat_tab[15])
+lat_tab[16] <- sub("\\$.*\\$", "$RESID_{Adj. R^2}$", lat_tab[16])
+
+latex_tab <- c("\\begin{center}",
+               "\\resizebox*{\\textwidth}{!}{",
+               "\\begin{tabular}{lccccccccccc}",
+               lat_tab[3:19],
+               "\\end{tabular}}",
+               "\\end{center}")
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+# International Replication and Extension
+
+## International sample
+
+```{r tab_world_sample, cache = TRUE, echo = FALSE, results = "asis"}
+time_effects <- estimate_int_time_effect(int_ys)
+df <- all20_ctry
+names(df) <- c("ISO code", "Country", "# years", "# observations")
+kable(df, format = "latex", booktabs = T, linesep = "",
+      format.args = list(decimal.mark = ".", big.mark = ",", 
+                         scientific=FALSE)) -> kab_latex
+
+lat_tab <- unlist(strsplit(kab_latex, "\n"))
+
+latex_tab <- c("\\begin{center}",
+               "\\resizebox*{!}{0.8\\textheight}{",
+               lat_tab[2:31],
+               "\\midrule",
+               paste0("Total & & ", 
+                      format(nrow(int_ys), big.mark = ","), 
+                      " & ", 
+                      format(nrow(all20_ctry_sample), big.mark = ","), 
+                      "\\\\"),
+               "\\bottomrule",
+               "\\end{tabular}}", 
+               "\\end{center}")
+cat(paste(latex_tab, collapse = "\n"))               
+```
+
+
+## $TIME$ effect and impact of $CFO$ distribution internationally
+
+``` {r fig_time_effect_cfo_world_sbs, out.height = "8cm", cache = TRUE, echo=FALSE}
+prepare_fig_time_effect_sbs(time_effects, "cfo")
+```
+
+
+## [Regression results](https://jgassen.shinyapps.io/expacc)
+
+``` {r tab_tests_world, echo=FALSE, cache = TRUE, results="asis"}
+tab_tests_world <- prepare_tab_impact_cfo_dist_int(int_ys)
+tab_tests_world$table[12] <- "\\\\[-1.8ex] & $\\beta_1$ & $\\beta_1$ & $RESID_{CFO}$ & $Adj. R^2$ & $Adj. R^2$ & $RESID_{Adj. R^2}$ \\\\ "
+latex_tab <- c("\\begin{center}",
+               "\\resizebox*{!}{0.8\\textheight}{",
+               "\\begin{tabular}{lcccccc}",
+               tab_tests_world$table[8:14],
+               sub(pattern = "(\\b[a-zA-Z\\\\_]+\\b)", "\\U$\\1$", tab_tests_world$table[15:31], perl = TRUE),
+               tab_tests_world$table[32:(length(tab_tests_world$table) - 3)],
+               "\\end{tabular}}",
+               "\\end{center}")
+cat(paste(latex_tab, collapse = "\n"))
+```
+
+
+## Yearly fixed effects
+
+``` {r fig_yearly_fixed_effects, out.height = "8cm", cache = TRUE, echo=FALSE}
+prepare_fig_yearly_fixed_effects(int_ys, "resid_cfo")
+```
+
+
+## US: The effect is centered in the 80s/90s \dots
+
+``` {r fig_rolling_bs, out.height = "8cm", cache = TRUE, echo=FALSE}
+prepare_rolling_bs_figure(test_sample, 10, "level", "adjr2")
+```
+
+
+## \dots and is driven by new firms and certain industries
+
+``` {r fig_corr_change_by_ind, out.height = "8cm", cache = TRUE, echo=FALSE}
+prepare_fig_corr_change_by_ind(test_sample)
+```
+
+
+# Conclusion
+
+## Wrapping up and next steps
+
+* ~80% of the temporal effect documented by BLZ can be explained by changes in cash flow distribution over time.
+* International data documents a remaining time trend that
+    - is most pronounced in the 80s/90s and
+    - is driven by young firms and tech industries
+* This seems inconsistent with an accounting standards based explanation
+* Some potential reasons for the drastic change in the cash flow distribution across time:
+    - Changes in database coverage
+    - More early stage life cycle firms in recent years
+    - Firms with longer operating cycles in recent years
+    - Less tangible investment in recent years (replacing CFI by CFO)  
+* Open science: Everybody is invited to explore these issues further by building on our analyses! 
