@@ -46,13 +46,13 @@ prepare_fig_blz_results <- function() {
   blz_result <- read.csv("raw_data/blz_reg_results.csv", stringsAsFactors = FALSE)
 
   gcfo <- ggplot(blz_result, aes(x=year, y=level_cfo_est)) +
-    geom_point(size = 2, color = hue_pal()(1)) +
+    geom_point(size = 2, color = "#F8766D") +
     theme_bw() + guides(shape = FALSE) +
     xlab("Year") +
     ylab(expression(beta[1]))
   
   gr2 <- ggplot(blz_result, aes(x=year, y=level_adjr2)) +
-    geom_point(size = 2, color = hue_pal()(1)) +
+    geom_point(size = 2, color = "#F8766D") +
     theme_bw()  +
     xlab("Year") +
     ylab(expression(paste("Adj. ", R^2))) 

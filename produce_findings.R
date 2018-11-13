@@ -27,13 +27,13 @@ rm (list=ls())
 # Your password will not be stored.
 # Pulling data will take a while.
 
-pull_wrds_data <- FALSE
+pull_wrds_data <- TRUE
 
 # Set the below to TRUE when you want repull consumer price data 
 # and the iso3 country level name table from the web 
 # This also needs to be done at least once.
 
-refresh <- FALSE
+refresh <- TRUE
 
 # The code below uses a set of R packages, listed in the
 # 'pkgs' vector. These packages need to be installed to
