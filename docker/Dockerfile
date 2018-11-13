@@ -20,6 +20,10 @@ RUN  R -e "install.packages(c('Quandl', 'gtools', 'ggpubr', 'lfe',  \
   && R -e "devtools::install_github('thomasp85/gganimate@81e8234')"
 
 # Install some additional texlife packages
+# First make sure that tlmgr is current
+# Then install the packages needed to build the paper
+
+RUN tlmgr update --self
 
 RUN tlmgr install multirow xcolor colortbl wrapfig float tabu varwidth threeparttable \
                   threeparttablex environ trimspaces ulem makecell endfloat setspace \
@@ -27,6 +31,7 @@ RUN tlmgr install multirow xcolor colortbl wrapfig float tabu varwidth threepart
   && tlmgr path add 
 
 # The below invalidates the cache whenever the Head of the Github repo changes
+
 ADD https://api.github.com/repos/joachim-gassen/ExpAcc/git/refs/heads/master version.json  
 
 RUN cd /home/rstudio \
