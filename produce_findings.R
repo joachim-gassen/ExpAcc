@@ -146,9 +146,9 @@ tab_corr_yearly_us <- prepare_correlation_table(us_ys)
 display_html_viewer(tab_corr_yearly_us$kable_ret)
 tab_blz_tab4 <- prepare_tab_blz_tab4(us_ys, format = "html")
 display_html_viewer(tab_blz_tab4$table)
-tab_us <- prepare_tab_impact_cfo_dist_us(us_ys, model="dd", idv="cfo", 
+tab_us <- prepare_tab_impact_cfo_dist(us_ys, model="dd", idv="cfo", 
                                          format = "html")
-display_html_viewer(tab_us[[1]]$table)
+# display_html_viewer(tab_us[[1]]$table)
 display_html_viewer(tab_us[[2]]$table)
 
 tab_full_model <- prepare_tab_full_model(us_ys, format = "html")
@@ -164,16 +164,13 @@ prepare_fig_time_effect_sbs(time_effects, "adjr2")
 
 tab_corr_yearly_int <- prepare_correlation_table(int_ys)
 display_html_viewer(tab_corr_yearly_int$kable_ret)
-tab_int <- prepare_tab_impact_cfo_dist_int(int_ys, format = "html")
-display_html_viewer(tab_int$table)
-tab_int_blz_tab4 <- prepare_tab_blz_tab4(int_ys, format = "html", 
-                                         feffects = rep("country", 6), 
-                                         clusters = rep("country", 6))
-display_html_viewer(tab_int_blz_tab4$table)
+tab_int <- prepare_tab_impact_cfo_dist(int_ys, model="dd", idv="cfo", 
+                                      format = "html")
+display_html_viewer(tab_int[[2]]$table)
 
 tab_int_full_model <- prepare_tab_full_model(int_ys, format = "html", 
-                                         feffects = rep("country", 4), 
-                                         clusters = rep("country", 4))
+                                         feffects = rep("country", 8), 
+                                         clusters = rep("country", 8))
 display_html_viewer(tab_int_full_model$table)
 
 

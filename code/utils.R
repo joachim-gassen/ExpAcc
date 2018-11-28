@@ -256,7 +256,7 @@ vif.felm <- function (fit) {
 
 
 add_vif_to_reg_table <- function(m, col, format = "latex") {
-  vif <- sapply(col, function(x) vif.felm(m$models[[x]]$model))
+  vif <- lapply(col, function(x) vif.felm(m$models[[x]]$model))
   for (i in 1:length(m$models)) {
     lhs <- rownames(m$models[[i]]$model$coefficients)
     if (i == 1) lhsvars <- lhs else
@@ -286,7 +286,7 @@ add_vif_to_reg_table <- function(m, col, format = "latex") {
     }
     str_in <- paste0(str_in, '\\\\ ')
   } else stop("Unkonwn format.")
-  for (pos in 1:max(lengths(vif)))
+  for (pos in 1:length(lhsvars))
     m$table <- append(m$table, str_in[pos], ifelse(format == "html", 3, 12) + 4*pos)
   return(m)
 }
