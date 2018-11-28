@@ -31,20 +31,8 @@ read_cstat_us_raw_data <- function(rds_file) {
 
 prepare_us_samples <- function() {
   cstat_sample <- read_cstat_us_raw_data("data/cstat_us_sample.RDS")
-  
-  vd <- readRDS("raw_data/blz_var_definitions.RDS")
-  vd[nrow(vd) + 1,] <- list("ff12ind", "ff12ind_desc", "factor", 1)
-  vd[nrow(vd) + 1,] <- list("ff48ind", "ff48ind_desc", "factor", 1)
-  vd[nrow(vd) + 1,] <- list("dsale", "sale/mleadlag(sale, -1, year)", "numerical", 1)
-  vd[nrow(vd) + 1,] <- list("d2sale", "sale/mleadlag(sale, -2, year)", "numerical", 1)
-  vd[nrow(vd) + 1,] <- list("avg_at_cpi2014", "avg_at * cpi2014_adj", "numerical", 1)
-  vd[nrow(vd) + 1,] <- list("cpi2014_adj", "cpi2014_adj", "numerical", 1)
-  vd[nrow(vd) + 1,] <- list("q", "(at - ceq + prcc_f*csho)/at", "numerical", 1)
-  vd[nrow(vd) + 1,] <- list("cfi", "ivncf/avg_at", "numerical", 1)
-  vd[nrow(vd) + 1,] <- list("cff", "fincf/avg_at", "numerical", 1)
-  vd[nrow(vd) + 1,] <- list("fcf", "cfo + cfi", "numerical", 1)
-  vd[nrow(vd) + 1,] <- list("capex", "capx/avg_at", "numerical", 1)
-  
+  vd <- read_csv("raw_data/blz_var_definitions.csv")
+
   if (refresh) {
     cpiauscl <- Quandl("FRED/CPIAUCSL")
     saveRDS(cpiauscl, "data/cpiauscl.RDS")
@@ -67,6 +55,8 @@ prepare_us_samples <- function() {
     left_join(ff12, by = "sic") %>%
     left_join(ff48, by = "sic") %>%
     calc_variables(vd$var_name, vd$var_def, vd$type) -> raw_sample
+  raw_sample$ff12ind[is.na(raw_sample$ff12ind)] <- "Other"
+  raw_sample$ff48ind[is.na(raw_sample$ff48ind)] <- "Almost Nothing"
   raw_sample$gvkey <- as.factor(raw_sample$gvkey)
   raw_sample <- droplevels(as.data.frame(raw_sample))
   
@@ -74,7 +64,6 @@ prepare_us_samples <- function() {
     apply_screen(list("((as.numeric(as.character(sic)) < 6000) | 
                         (as.numeric(as.character(sic)) > 6999))",
                         "(aqs/sale < 0.05)",
-                        "(year > 1963)", "(year < 2015)",
                         "is.finite(cfo)",
                         "is.finite(tacc)")) %>%
     winsorize(exclude = "mv", byval = "year") %>%
@@ -83,7 +72,11 @@ prepare_us_samples <- function() {
     mutate(leadcfo = mleadlag(cfo, 1, year),
            lagcfo = mleadlag(cfo, -1, year),
            dcfo = cfo - mleadlag(cfo, -1, year),
-           dtacc = tacc - mleadlag(tacc, -1, year))
+           lagdcfo = mleadlag(dcfo, -1, year),
+           dtacc = tacc - mleadlag(tacc, -1, year),
+           leadexpense = mleadlag(expense, 1, year),
+           lagexpense = mleadlag(expense, -1, year)) %>% 
+    filter(year > 1963, year < 2015)
   
   rep_sample <- droplevels(as.data.frame(rep_sample))
   rep_sample$year <- as.ordered(rep_sample$year)
@@ -92,7 +85,6 @@ prepare_us_samples <- function() {
     apply_screen(list("((as.numeric(as.character(sic)) < 6000) | 
                         (as.numeric(as.character(sic)) > 6999))",
                         "(aqs/sale < 0.05)",
-                        "(year > 1963)", "(year < 2015)",
                         "is.finite(cfo)",
                         "is.finite(tacc)",
                         "avg_at >= 7.5")) %>%
@@ -102,38 +94,22 @@ prepare_us_samples <- function() {
     mutate(leadcfo = mleadlag(cfo, 1, year),
            lagcfo = mleadlag(cfo, -1, year),
            dcfo = cfo - mleadlag(cfo, -1, year),
-           dtacc = tacc - mleadlag(tacc, -1, year))
-  
+           lagdcfo = mleadlag(dcfo, -1, year),
+           dtacc = tacc - mleadlag(tacc, -1, year),
+           leadexpense = mleadlag(expense, 1, year),
+           lagexpense = mleadlag(expense, -1, year)) %>% 
+    filter(year > 1963, year < 2015)
+
   test_sample <- droplevels(as.data.frame(test_sample))
   test_sample$year <- as.ordered(test_sample$year)
   
-  balanced_sample <- as.data.frame(raw_sample %>%  
-                                     apply_screen(list("((as.numeric(as.character(sic)) < 6000) | 
-                                                          (as.numeric(as.character(sic)) > 6999))",
-                                                       "(year > 1963)", "(year < 2015)",
-                                                       "is.finite(cfo)",
-                                                       "is.finite(tacc)",
-                                                       "avg_at >= 7.5")) %>%
-                                     winsorize(exclude = "mv", byval = "year") %>%
-                                     select_variables(c(vd$var_name)) %>%
-                                     group_by(gvkey) %>%
-                                     mutate(leadcfo = mleadlag(cfo, 1, year),
-                                            lagcfo = mleadlag(cfo, -1, year),
-                                            dcfo = cfo - mleadlag(cfo, -1, year),
-                                            dtacc = tacc - mleadlag(tacc, -1, year))) %>%
-                                     balance_sample(cs_id = c("gvkey", "conm"), ts_id = c("year"), vars = c("cfo","tacc"), 
-                                                    min = 1988, max = 2014)
-  
-  balanced_sample <- droplevels(as.data.frame(balanced_sample))
-  balanced_sample$year <- as.ordered(balanced_sample$year)
-  return(mget(c("raw_sample", "rep_sample", "test_sample", "balanced_sample")))
+  return(mget(c("raw_sample", "rep_sample", "test_sample")))
 }
 
 
 prepare_us_yearly_sample <- function(ts) {
   ts %>%
     group_by(gvkey) %>%
-    mutate(lagdcfo = mleadlag(dcfo, -1, year)) %>%
     group_by(year) %>%
     summarise(cfo_mean = mean(cfo),
               cfo_sd = sd(cfo),
@@ -142,7 +118,14 @@ prepare_us_yearly_sample <- function(ts) {
               cfo_min = min(cfo),
               cfo_max = max(cfo),
               cfo_pneg = sum(as.numeric(cfo < 0))/n(),
-              dcfo_acorr = cor(dcfo, lagdcfo, use = "na.or.complete")) -> ys
+              dcfo_acorr = cor(dcfo, lagdcfo, use = "na.or.complete"),
+              std_oi_pti = sd(oi - pti, na.rm = TRUE),
+              pctloss = sum(as.numeric(e < 0))/n(),
+              sgaint = mean(sgaint, na.rm = TRUE),
+              share_int_ind = sum(ff12ind == "Healthcare, Medical Equipment, and Drugs" |
+                                     ff12ind == "Chemicals and Allied Products" |
+                                     ff12ind == "Telephone and Television Transmission" |
+                                     ff12ind == "Business Equipment") / n()) -> ys
   
   ys$year <- as.numeric(as.character(ys$year))
   
@@ -158,6 +141,13 @@ prepare_us_yearly_sample <- function(ts) {
   names(rr)[2:length(names(rr))] <- paste0("dd_", names(rr)[2:length(names(rr))])
   rr$year <- as.numeric(rr$year)
   ys <- left_join(ys, rr)
+
+  rr <- generate_byvar_regression_stats(ts, dvs = "sales", idvs = c("lagexpense", "expense", "leadexpense"))
+  rr <- rr %>%
+    mutate(year = as.numeric(year)) %>%
+    rename(dt_adjr2 = adjr2) %>%
+    select(year, dt_adjr2)
+  ys <- left_join(ys, rr)
   
   ctrls_str <- "cfo_mean + cfo_sd + cfo_skew + cfo_kurt"
   for (model in c("level", "change", "dd")) {
@@ -170,12 +160,13 @@ prepare_us_yearly_sample <- function(ts) {
     ys[!is.na(ys[,paste0(model, "_adjr2")]), paste0(model, "_resid_adjr2")] <- madjr2$residuals
   }
   
+  ys$rel_msize <- ys$level_n/max(ys$level_n)
   ys$time <- ys$year - min(ys$year)
   ys$year <- as.ordered(ys$year)
   ys$country <- as.factor("USA")
   ys$cid <- ys$country 
   ys$yid <- ys$year
-  ys <- ys[, c(42, 1:41, 43, 44)]
+  ys <- ys[, c(48, 1:47, 49, 50)]
   
   return(as.data.frame(ys))
 }
@@ -206,15 +197,14 @@ prepare_int_samples <- function() {
   int$ctryr <- paste0(int$loc, int$fyear)
   int_raw_sample <- int
   
-  vd <- readRDS("raw_data/blz_var_definitions.RDS")
-  vd[9,] <- list("tacc_post_1987", "(ib - oancf)/avg_at", "numerical", 1)
-  vd[11,] <- list("tacc", "ifelse(is.finite(tacc_post_1987), tacc_post_1987, tacc_pre_1988)", "numerical", 1)
-  vd[12,] <- list("cfo", "ifelse(is.finite(oancf/avg_at), oancf/avg_at, e - tacc_pre_1988)", "numerical", 1)
-  vd <- vd[c(-5,-6),]
+  vd <- read_csv("raw_data/blz_var_definitions.csv")
+  vd[13,] <- list("tacc_post_1987", "(ib - oancf)/avg_at", "numerical", 1)
+  vd[15,] <- list("tacc", "ifelse(is.finite(tacc_post_1987), tacc_post_1987, tacc_pre_1988)", "numerical", 1)
+  vd[16,] <- list("cfo", "ifelse(is.finite(oancf/avg_at), oancf/avg_at, e - tacc_pre_1988)", "numerical", 1)
+  vd <- vd[c(-7, -8,-9, -11),]
   vd[nrow(vd) + 1,] <- list("country", "loc", "factor", 1)
   vd[nrow(vd) + 1,] <- list("country_name", "country_name", "factor", 1)
-  vd[nrow(vd) + 1,] <- list("ff12ind", "ff12ind_desc", "factor", 1)
-  vd[nrow(vd) + 1,] <- list("ff48ind", "ff48ind_desc", "factor", 1)    
+
   
   ff48 <- readRDS("raw_data/ff_48_ind.RDS")[,c(1,3)]
   ff12 <- readRDS("raw_data/ff_12_ind.RDS")[,c(1,3)]
@@ -224,13 +214,15 @@ prepare_int_samples <- function() {
     left_join(ff12, by = "sic") %>%
     left_join(ff48, by = "sic") %>%
     calc_variables(vd$var_name, vd$var_def, vd$type) -> int_raw_sample
+  
+  int_raw_sample$ff12ind[is.na(int_raw_sample$ff12ind)] <- "Other"
+  int_raw_sample$ff48ind[is.na(int_raw_sample$ff48ind)] <- "Almost Nothing"
   int_raw_sample$gvkey <- as.factor(int_raw_sample$gvkey)
   int_raw_sample <- droplevels(as.data.frame(int_raw_sample))
   
   temp <- int_raw_sample %>%  
     apply_screen(list("((as.numeric(as.character(sic)) < 6000) | 
                         (as.numeric(as.character(sic)) > 6999))",
-                        "(year < 2015)",
                         "is.finite(cfo)",
                         "is.finite(tacc)")) 
   
@@ -251,7 +243,11 @@ prepare_int_samples <- function() {
     mutate(leadcfo = mleadlag(cfo, 1, year),
            lagcfo = mleadlag(cfo, -1, year),
            dcfo = cfo - mleadlag(cfo, -1, year),
-           dtacc = tacc - mleadlag(tacc, -1, year)) ->
+           lagdcfo = mleadlag(dcfo, -1, year),
+           dtacc = tacc - mleadlag(tacc, -1, year),
+           leadexpense = mleadlag(expense, 1, year),
+           lagexpense = mleadlag(expense, -1, year)) %>%
+    filter(as.numeric(as.character(year)) < 2017) ->
     int_base_sample
   
   int_base_sample <- droplevels(as.data.frame(int_base_sample))
@@ -284,8 +280,9 @@ prepare_int_samples <- function() {
   us <- droplevels(test_sample[test_sample$year > 1988,])
   us$country <- "USA"
   us$country_name <- "United States of America"
-  all20_ctry_sample <- rbind(us[,c("country", "country_name", "year", "gvkey", "cfo", "tacc", "leadcfo", "lagcfo", "dcfo", "dtacc")],
-                             int[,c("country", "country_name", "year", "gvkey", "cfo", "tacc", "leadcfo", "lagcfo", "dcfo", "dtacc")])
+  vars <- c("country", "country_name", "year", "gvkey", "ff12ind", "e", "cfo", "tacc", "sales", "expense", "sgaint", "oi", "pti", 
+            "leadcfo", "lagcfo", "dcfo", "lagdcfo", "dtacc", "lagexpense", "leadexpense")
+  all20_ctry_sample <- rbind(us[, vars], int[, vars])
   all20_ctry <- rbind(list(country = "USA", 
                            country_name = "United States of America", 
                            nyears = length(unique(us$year)), nobs=nrow(us)),
@@ -308,7 +305,14 @@ prepare_int_yearly_sample <- function(is) {
               cfo_min = min(cfo),
               cfo_max = max(cfo),
               cfo_pneg = sum(as.numeric(cfo < 0))/n(),
-              dcfo_acorr = cor(dcfo, lagdcfo, use = "na.or.complete")) %>%
+              dcfo_acorr = cor(dcfo, lagdcfo, use = "na.or.complete"),
+              std_oi_pti = sd(oi - pti, na.rm = TRUE),
+              pctloss = sum(as.numeric(e < 0))/n(),
+              sgaint = mean(sgaint, na.rm = TRUE),
+              share_int_ind = sum(ff12ind == "Healthcare, Medical Equipment, and Drugs" |
+                                     ff12ind == "Chemicals and Allied Products" |
+                                     ff12ind == "Telephone and Television Transmission" |
+                                     ff12ind == "Business Equipment") / n()) %>%
     mutate(ctr_year = paste0(as.character(country), "_", as.character(year)))  -> ys
   is$ctr_year <- factor(paste0(as.character(is$country), "_", as.character(is$year)))
   rr <- generate_byvar_regression_stats(is, dvs = "tacc", idvs = "cfo", byvar = "ctr_year")
@@ -319,6 +323,12 @@ prepare_int_yearly_sample <- function(is) {
   ys <- left_join(ys, rr)
   rr <- generate_byvar_regression_stats(is, dvs = "tacc", idvs = c("lagcfo", "cfo", "leadcfo"), byvar = "ctr_year")
   names(rr)[2:length(names(rr))] <- paste0("dd_", names(rr)[2:length(names(rr))])
+  ys <- left_join(ys, rr)
+  
+  rr <- generate_byvar_regression_stats(is, dvs = "sales", idvs = c("lagexpense", "expense", "leadexpense"), byvar = "ctr_year")
+  rr <- rr %>%
+    rename(dt_adjr2 = adjr2) %>%
+    select(ctr_year, dt_adjr2)
   ys <- left_join(ys, rr)
   
   ys %>% 
@@ -350,12 +360,17 @@ prepare_int_yearly_sample <- function(is) {
   
   cys <- left_join(ys, level) %>% 
     left_join(change) %>%
-    left_join(dd)
+    left_join(dd) %>%
+    group_by(country) %>%
+    mutate(max_nobs = max(level_n)) %>%
+    ungroup() %>%
+    mutate(rel_msize = level_n/max_nobs) %>%
+    select(-max_nobs)
   
   cys$time <- as.numeric(as.character(cys$year)) - min(as.numeric(as.character(cys$year)))
   cys$cid <- cys$country 
   cys$yid <- cys$year
-  cys <- cys[,-11]
+  cys <- cys[,-15]
 
   return(as.data.frame(cys))
 }

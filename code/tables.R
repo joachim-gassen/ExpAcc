@@ -3,6 +3,21 @@
 # This code contains functions needed to prepare the tables of Bierey and Gassen (2018) 
 # Depends on ("code/utils.R") being sourced
 
+prepare_tab_blz_tab4 <- function(ys, format = "latex", feffects = rep("", 6), clusters = rep("", 6)) {
+  tab <- prepare_regression_table(ys, dvs = rep("dd_adjr2", 6),
+                                   idvs = list("time", 
+                                               c("time", "cfo_sd", "dcfo_acorr"),
+                                               c("time", "std_oi_pti", "pctloss"),
+                                               c("time", "dt_adjr2"),
+                                               c("time", "sgaint"),
+                                               c("time", "cfo_sd", "dcfo_acorr", "std_oi_pti", "pctloss", "dt_adjr2", "sgaint")), 
+                                  feffects = feffects, clusters = clusters, format = format)
+  tab <- add_vif_to_reg_table(tab, 2:6, format) 
+  return(tab)
+}
+
+
+
 prepare_tab_impact_cfo_dist_us <- function(ys, model = "level", idv = "cfo", format = "latex") {
   dv_coef <- paste0(model, "_", idv, "_est")
   dv_adjr2 <- paste0(model, "_adjr2")
@@ -39,4 +54,15 @@ prepare_tab_impact_cfo_dist_int <- function(ys, model = "level", idv = "cfo", fo
                                 format = format)
   t <- add_vif_to_reg_table(t, c(2,5), format) 
   return(t)
+}
+
+prepare_tab_full_model <- function(ys, format = "latex", feffects = rep("", 4), clusters = rep("", 4)) {
+  tab <- prepare_regression_table(ys, dvs = rep("dd_adjr2", 4),
+                                  idvs = list("time", 
+                                              c("time", "cfo_mean", "cfo_sd", "cfo_skew", "cfo_pneg"),
+                                              c("time", "dcfo_acorr", "std_oi_pti", "dt_adjr2", "sgaint"), 
+                                              c("time", "cfo_mean", "cfo_sd", "cfo_skew", "cfo_pneg", "dcfo_acorr", "std_oi_pti", "dt_adjr2", "sgaint")),
+                                  feffects = feffects, clusters = clusters, format = format)
+  tab <- add_vif_to_reg_table(tab, 2:4, format) 
+  return(tab)
 }

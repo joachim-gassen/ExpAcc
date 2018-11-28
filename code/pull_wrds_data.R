@@ -98,8 +98,8 @@ wrds_stat_var_str <- paste(stat_vars, collapse = ", ")
 
 cs_filter <- "consol='C' and (indfmt='INDL' or indfmt='FS') and datafmt='STD' and popsrc='D'"
 cs_filter_int <- "consol='C' and (indfmt='INDL' or indfmt='FS') and datafmt='HIST_STD' and popsrc='I'"
-ts_filter <- "fyear>1961"
-ts_filter_int <- "fyear>1961"
+ts_filter <- "fyear>1960"
+ts_filter_int <- "fyear>1960"
 
 
 # --- Pull US data -------------------------------------------------------------

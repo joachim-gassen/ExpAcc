@@ -27,13 +27,13 @@ rm (list=ls())
 # Your password will not be stored.
 # Pulling data will take a while.
 
-pull_wrds_data <- TRUE
+pull_wrds_data <- FALSE
 
 # Set the below to TRUE when you want repull consumer price data 
 # and the iso3 country level name table from the web 
 # This also needs to be done at least once.
 
-refresh <- TRUE
+refresh <- FALSE
 
 # The code below uses a set of R packages, listed in the
 # 'pkgs' vector. These packages need to be installed to
@@ -144,10 +144,15 @@ prepare_fig_cfo_density_ridge(test_sample)
 
 tab_corr_yearly_us <- prepare_correlation_table(us_ys)
 display_html_viewer(tab_corr_yearly_us$kable_ret)
+tab_blz_tab4 <- prepare_tab_blz_tab4(us_ys, format = "html")
+display_html_viewer(tab_blz_tab4$table)
 tab_us <- prepare_tab_impact_cfo_dist_us(us_ys, model="dd", idv="cfo", 
                                          format = "html")
 display_html_viewer(tab_us[[1]]$table)
 display_html_viewer(tab_us[[2]]$table)
+
+tab_full_model <- prepare_tab_full_model(us_ys, format = "html")
+display_html_viewer(tab_full_model$table)
 
 
 # --- Prepare international analyses -------------------------------------------
@@ -156,8 +161,22 @@ time_effects <- estimate_int_time_effect(int_ys)
 
 prepare_fig_time_effect_sbs(time_effects, "cfo")
 prepare_fig_time_effect_sbs(time_effects, "adjr2")
+
+tab_corr_yearly_int <- prepare_correlation_table(int_ys)
+display_html_viewer(tab_corr_yearly_int$kable_ret)
 tab_int <- prepare_tab_impact_cfo_dist_int(int_ys, format = "html")
 display_html_viewer(tab_int$table)
+tab_int_blz_tab4 <- prepare_tab_blz_tab4(int_ys, format = "html", 
+                                         feffects = rep("country", 6), 
+                                         clusters = rep("country", 6))
+display_html_viewer(tab_int_blz_tab4$table)
+
+tab_int_full_model <- prepare_tab_full_model(int_ys, format = "html", 
+                                         feffects = rep("country", 4), 
+                                         clusters = rep("country", 4))
+display_html_viewer(tab_int_full_model$table)
+
+
 prepare_fig_yearly_fixed_effects(int_ys, "resid_cfo")
 prepare_fig_yearly_fixed_effects(int_ys, "resid_adjr2")
 
@@ -166,22 +185,25 @@ prepare_fig_yearly_fixed_effects(int_ys, "resid_adjr2")
 
 exp_abs_fname <- "paper/text_expand.txt"
 exp_abs <- readChar(exp_abs_fname, file.info(exp_abs_fname)$size)
-ys_def <- readRDS("raw_data/ys_def.RDS")
+ys_def <- as.data.frame(read_csv("raw_data/ys_def.csv"))
 config_int <- readRDS("raw_data/exp_acc_config_int.RDS")
 config_us <- readRDS("raw_data/exp_acc_config_us.RDS")
 
-vars_for_expand <- c(1:10, 12:13, 17, 36:37,
-                     19:20, 24, 38:39,
-                     26:29, 35, 40:41,
-                     42:44)
+vars_for_expand <- c(1:14, 40, 15, 17, 21, 22, 24, 28,
+                     29, 31:33, 39, 41:50)
 int_ys_expand <- int_ys[,vars_for_expand]
 us_ys_expand <- us_ys[,vars_for_expand]
 ys_def_expand <- ys_def[vars_for_expand,]
+year_levels <-  unique(c(levels(us_ys$year), levels(int_ys$year)))
 int_ys_expand$year <- factor(int_ys_expand$year, 
-                             levels = levels(us_ys_expand$year))
+                             levels = year_levels)
 int_ys_expand$yid <- factor(int_ys_expand$yid, 
-                            levels = levels(us_ys_expand$yid))
-
+                            levels = year_levels)
+us_ys_expand$year <- factor(us_ys_expand$year, 
+                             levels = year_levels)
+us_ys_expand$yid <- factor(us_ys_expand$yid, 
+                            levels = year_levels)
+                             
 
 ExPanD(list(int_ys = int_ys_expand, us_ys = us_ys_expand), df_def = ys_def_expand, 
        df_name = c("International country year sample", "US country year sample"),

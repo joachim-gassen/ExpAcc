@@ -1,0 +1,23 @@
+var_name,var_def,type,can_be_na
+gvkey,gvkey,cs_id,0
+conm,conm,cs_id,0
+year,fyear,ts_id,0
+sic,sic,factor,0
+ff12ind,ff12ind_desc,factor,1
+ff48ind,ff48ind_desc,factor,1
+cpi2014_adj,cpi2014_adj,numerical,1
+bm,ceq/(prcc_f*csho),numerical,1
+mv,prcc_f*csho,numerical,1
+avg_at,"0.5*mleadlag(at, -1, year) + 0.5*at",numerical,0
+avg_at_cpi2014,avg_at*cpi2014_adj,numerical,1
+e,ib/avg_at,numerical,0
+tacc_post_1987,(ibc - oancf)/avg_at,numerical,1
+tacc_pre_1988,"(act - mleadlag(act, -1, year) - (che - mleadlag(che, -1, year)) - ((lct - mleadlag(lct, -1, year)) - (dlc - mleadlag(dlc, -1, year))) - dp)/avg_at",numerical,1
+tacc,"ifelse(year > 1987, tacc_post_1987, tacc_pre_1988)",numerical,0
+cfo,"ifelse(year > 1987, oancf/avg_at, e - tacc_pre_1988)",numerical,0
+sales,sale/avg_at,numerical,1
+expense,(sale - ib)/avg_at,numerical,1
+sgaint,xsga/(sale - ib),numerical,1
+oi,oiadp/avg_at,numerical,1
+pti,pi/avg_at,numerical,1
+time,as.numeric(as.character(year))-1964,numerical,0

@@ -257,27 +257,36 @@ vif.felm <- function (fit) {
 
 add_vif_to_reg_table <- function(m, col, format = "latex") {
   vif <- sapply(col, function(x) vif.felm(m$models[[x]]$model))
+  for (i in 1:length(m$models)) {
+    lhs <- rownames(m$models[[i]]$model$coefficients)
+    if (i == 1) lhsvars <- lhs else
+      lhsvars <- c(lhsvars, lhs[which(!lhs %in% lhsvars)])
+  } 
+  lhsvars <- lhsvars[!lhsvars %in% "(Intercept)"] 
   if (format == "html") {
-    # not tested
     str_in <- '<tr><td style=\"text-align:left\"></td>'
     for (i in 1:length(m$models)) {
-      if (i %in% col) str_in <- paste0(str_in, '<td>[',
-                                       format(vif[,which(col == i)], trim=TRUE, digit = 2, nsmall = 2),
-                                       ']</td>')
-      else str_in <- paste0(str_in, '</td><td>')
+      vif_strings <- rep("", length(lhsvars))
+      if (i %in% col) {
+        vif_strings[which(lhsvars %in% names(vif[[which(col == i)]]))] <- 
+          paste0('[', format(vif[[which(col == i)]], trim=TRUE, digit = 2, nsmall = 2), ']')
+        str_in <- paste0(str_in, '<td>',vif_strings ,'</td>')
+      } else str_in <- paste0(str_in, '</td><td>')
     }
     str_in <- paste0(str_in, '</tr>')
   } else if (format == "latex") {
     str_in <- "  & "
+    vif_strings <- rep("", length(lhsvars))
     for (i in 1:length(m$models)) {
-      if (i %in% col) str_in <- paste0(str_in, '[',
-                                       format(vif[,which(col == i)], trim=TRUE, digit = 2, nsmall = 2),
-                                       '] & ')
-      else if (i != length(m$models)) str_in <- paste0(str_in, '& ')
+      if (i %in% col) {
+        vif_strings[which(lhsvars %in% names(vif[[which(col == i)]]))] <- 
+          paste0('[', format(vif[[which(col == i)]], trim=TRUE, digit = 2, nsmall = 2), ']')
+        str_in <- paste0(str_in, vif_strings, ' & ')
+      } else if (i != length(m$models)) str_in <- paste0(str_in, '& ')
     }
     str_in <- paste0(str_in, '\\\\ ')
   } else stop("Unkonwn format.")
-  for (pos in 1:nrow(vif))
+  for (pos in 1:max(lengths(vif)))
     m$table <- append(m$table, str_in[pos], ifelse(format == "html", 3, 12) + 4*pos)
   return(m)
 }
