@@ -52,8 +52,8 @@ source("../code/videos.R")
 
 pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
           "lubridate", "broom", "tweenr", "moments", "Hmisc", "RCurl", 
-          "ggridges", "latex2exp", "knitr", "kableExtra",  
-          "nteetor/gganimate@71da746", "joachim-gassen/ExPanDaR@11b4f4b")
+          "ggridges", "latex2exp", "knitr", "kableExtra", "ExPanDaR", 
+          "nteetor/gganimate@71da746")
 
 invisible(lapply(pkgs, install_pkg_if_missing))
 invisible(lapply(pkgs, attach_pkg))
@@ -411,7 +411,7 @@ cat(paste(latex_tab, collapse = "\n"))
 After controlling for changes in the cash flow distribution, time is no longer significantly associated with the residual variance in $Adj. R^2$ and $\beta_1$ (see column 7 of Table \ref{tab:dist_tests_cfo} and Table \ref{tab:dist_tests_adjr2} which are based on model (\ref{resid_cfo_reg}). It has to be stated, however, that this test is very aggressive as it tests for explanatory power of time after purging out the explanatory power of the changing properties of the cash flow distribution. The results in column 6 illustrate that in models where time is being included as an explanatory variable concurrently with the distributional properties of operating cash flow, the time dimension maintains its significance, albeit with exceptionally high variance inflation factors.
 
 ``` {r corr_yearly_us_sample, cache = TRUE, results="asis"}
-tab <- prepare_correlation_table(us_ys[,c(3:8, 13, 17, 36, 37, 42)], format = "latex", booktabs = TRUE, linesep = "")
+tab <- prepare_correlation_table(us_ys[,c(4:9, 14, 18, 37, 38, 43)], format = "latex", booktabs = TRUE, linesep = "")
 tab$kable_ret <- gsub("%", "\\%", tab$kable_ret)
 tab$kable_ret <- gsub("_", "\\\\_", tab$kable_ret)
 lat_tab <- unlist(strsplit(tab$kable_ret, "\n"))

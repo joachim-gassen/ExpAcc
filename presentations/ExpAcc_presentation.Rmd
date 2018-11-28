@@ -26,8 +26,6 @@ knitr::opts_chunk$set(echo = TRUE, table.align = "center", cache.lazy = FALSE, m
 library(knitr)
 opts_knit$set(root.dir = "..", fig.pos = 'h')
 library(kableExtra)
-library(captioner)
-library(animation)
 
 install_pkg_if_missing_and_attach <- function(pkg_string) {
   lib_str <-  strsplit(strsplit(pkg_string, "/")[[1]][1*grepl("/", pkg_string) + 1], "@")[[1]][1]
@@ -85,7 +83,7 @@ if (!file.exists("presentations/test_sample_cfo_tacc_scatter_3x2.mp4")) {
                             size_legend="Average AT (2014 prices, M US-$)",
                             color="ff12ind", color_legend="Fama/French 12 industry", 
                             loess = TRUE,
-                            filename = "presentations/test_sample_cfo_tacc_scatter_3x2.gif",
+                            filename = "presentations/test_sample_cfo_tacc_scatter_3x2.mp4",
                             height = 1000, width = 1500, units = "px", fsize = 24, 
                             nframes = 100, fps = 25)
 } 

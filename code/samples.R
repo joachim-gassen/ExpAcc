@@ -167,7 +167,7 @@ prepare_us_yearly_sample <- function(ts) {
   ys$cid <- ys$country 
   ys$yid <- ys$year
   ys <- ys[, c(48, 1:47, 49, 50)]
-  
+
   return(as.data.frame(ys))
 }
 
