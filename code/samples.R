@@ -67,11 +67,12 @@ prepare_us_samples <- function() {
                         "is.finite(cfo)",
                         "is.finite(tacc)")) %>%
     winsorize(exclude = "mv", byval = "year") %>%
+#    winsorize(include = c("cfo", "tacc"), byval = "year") %>%
     select_variables(c(vd$var_name)) %>%
     group_by(gvkey) %>%
     mutate(leadcfo = mleadlag(cfo, 1, year),
            lagcfo = mleadlag(cfo, -1, year),
-           dcfo = cfo - mleadlag(cfo, -1, year),
+           dcfo = cfo_uw - mleadlag(cfo_uw, -1, year),
            lagdcfo = mleadlag(dcfo, -1, year),
            dtacc = tacc - mleadlag(tacc, -1, year),
            leadexpense = mleadlag(expense, 1, year),
@@ -89,6 +90,7 @@ prepare_us_samples <- function() {
                         "is.finite(tacc)",
                         "avg_at >= 7.5")) %>%
     winsorize(exclude = "mv", byval = "year") %>%
+#    winsorize(include = c("cfo", "tacc"), byval = "year") %>%
     select_variables(c(vd$var_name)) %>%
     group_by(gvkey) %>%
     mutate(leadcfo = mleadlag(cfo, 1, year),
@@ -112,7 +114,7 @@ prepare_us_yearly_sample <- function(ts) {
     group_by(gvkey) %>%
     group_by(year) %>%
     summarise(cfo_mean = mean(cfo),
-              cfo_sd = sd(cfo),
+              cfo_sd = sd(cfo_uw),
               cfo_skew = skewness(cfo),
               cfo_kurt = kurtosis(cfo),
               cfo_min = min(cfo),
@@ -253,7 +255,7 @@ prepare_int_samples <- function() {
   int_base_sample <- droplevels(as.data.frame(int_base_sample))
   int_base_sample$year <- as.ordered(int_base_sample$year)  
   
-  int_test_sample <- int_base_sample %>%
+  int_full_sample <- int_base_sample %>%
     group_by(country,year) %>%
     mutate(nobs_yr = n()) %>%
     filter(nobs_yr >= 30) %>%
@@ -263,34 +265,36 @@ prepare_int_samples <- function() {
     arrange(-nyears, -nobs_ctr, country, year)
   
   
-  ctry_sample <- int_test_sample %>%
+  int_full_sample_obs <- int_full_sample %>%
     group_by(country, country_name) %>%
     summarise(nyears = length(unique(year)),
               nobs = n()) %>%
     arrange(-nyears, -nobs, country_name)
   
-  ctry_sample <- as.data.frame(ctry_sample)
-  int_test_sample <- droplevels(as.data.frame(int_test_sample))
-  int_test_sample$year <- as.ordered(int_test_sample$year)  
+  int_full_sample_obs <- as.data.frame(int_full_sample_obs)
+  int_full_sample_obs$country <- as.character(int_full_sample_obs$country)
+  int_full_sample <- droplevels(as.data.frame(int_full_sample))
+  int_full_sample$year <- as.ordered(int_full_sample$year)  
   
-  int <- droplevels(int_test_sample[int_test_sample$nyears >= 20,])
-  ctry <- ctry_sample[ctry_sample$nyears >= 20,]
-  ctry$country <- as.character(ctry$country)
-  
+  int_20_sample <- droplevels(int_full_sample[int_full_sample$nyears >= 20,])
+  int_20_sample_obs <- int_full_sample_obs[int_full_sample_obs$nyears >= 20,]
+
   us <- droplevels(test_sample[test_sample$year > 1988,])
   us$country <- "USA"
   us$country_name <- "United States of America"
   vars <- c("country", "country_name", "year", "gvkey", "ff12ind", "e", "cfo", "tacc", "sales", "expense", "sgaint", "oi", "pti", 
             "leadcfo", "lagcfo", "dcfo", "lagdcfo", "dtacc", "lagexpense", "leadexpense")
-  all20_ctry_sample <- rbind(us[, vars], int[, vars])
-  all20_ctry <- rbind(list(country = "USA", 
+
+  all_20_sample <- rbind(us[, vars], int_20_sample[, vars])
+  all_20_sample_obs <- rbind(list(country = "USA", 
                            country_name = "United States of America", 
                            nyears = length(unique(us$year)), nobs=nrow(us)),
-                      ctry)
-  all20_ctry_sample$country <- as.factor(all20_ctry_sample$country) 
-  all20_ctry$country <- as.factor(all20_ctry$country) 
+                      int_20_sample_obs)
+  all_20_sample$country <- as.factor(all_20_sample$country) 
+  all_20_sample_obs$country <- as.factor(all_20_sample_obs$country) 
   
-  return(mget(c("int_raw_sample", "int_base_sample", "int_test_sample", "ctry_sample", "all20_ctry_sample", "all20_ctry")))
+  return(mget(c("int_raw_sample", "int_base_sample", "int_full_sample", "int_20_sample", "all_20_sample", 
+                "int_full_sample_obs", "int_20_sample_obs", "all_20_sample_obs")))
 }
 
 

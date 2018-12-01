@@ -15,6 +15,8 @@ tacc_post_1987,(ibc - oancf)/avg_at,numerical,1
 tacc_pre_1988,"(act - mleadlag(act, -1, year) - (che - mleadlag(che, -1, year)) - ((lct - mleadlag(lct, -1, year)) - (dlc - mleadlag(dlc, -1, year))) - dp)/avg_at",numerical,1
 tacc,"ifelse(year > 1987, tacc_post_1987, tacc_pre_1988)",numerical,0
 cfo,"ifelse(year > 1987, oancf/avg_at, e - tacc_pre_1988)",numerical,0
+tacc_uw,tacc,numerical,1
+cfo_uw,cfo,numerical,1
 sales,sale/avg_at,numerical,1
 expense,(sale - ib)/avg_at,numerical,1
 sgaint,xsga/(sale - ib),numerical,1

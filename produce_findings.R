@@ -126,7 +126,8 @@ if (pull_wrds_data) source("code/pull_wrds_data.R", local = new.env())
 list2env(prepare_us_samples(), environment())
 list2env(prepare_int_samples(), environment())
 us_ys <- prepare_us_yearly_sample(test_sample)
-int_ys <- prepare_int_yearly_sample(all20_ctry_sample)
+int_ys <- prepare_int_yearly_sample(int_20_sample)
+int_ys_us <- prepare_int_yearly_sample(all_20_sample)
 
 
 # --- Prepare US analyses ------------------------------------------------------
@@ -146,6 +147,9 @@ tab_corr_yearly_us <- prepare_correlation_table(us_ys)
 display_html_viewer(tab_corr_yearly_us$kable_ret)
 tab_blz_tab4 <- prepare_tab_blz_tab4(us_ys, format = "html")
 display_html_viewer(tab_blz_tab4$table)
+tab_blz_univariate <- prepare_tab_blz_univariate(us_ys, format = "html")
+display_html_viewer(tab_blz_univariate$table)
+
 tab_us <- prepare_tab_impact_cfo_dist(us_ys, model="dd", idv="cfo", 
                                          format = "html")
 # display_html_viewer(tab_us[[1]]$table)
@@ -157,8 +161,8 @@ display_html_viewer(tab_full_model$table)
 
 # --- Prepare international analyses -------------------------------------------
 
-time_effects <- estimate_int_time_effect(int_ys)
-
+time_effects <- estimate_int_time_effect(int_ys_us)
+prepare_fig_time_effect_by_country(time_effects, "dd_adjr2_est")
 prepare_fig_time_effect_sbs(time_effects, "cfo")
 prepare_fig_time_effect_sbs(time_effects, "adjr2")
 
@@ -168,9 +172,7 @@ tab_int <- prepare_tab_impact_cfo_dist(int_ys, model="dd", idv="cfo",
                                       format = "html")
 display_html_viewer(tab_int[[2]]$table)
 
-tab_int_full_model <- prepare_tab_full_model(int_ys, format = "html", 
-                                         feffects = rep("country", 8), 
-                                         clusters = rep("country", 8))
+tab_int_full_model <- prepare_tab_full_model(int_ys, format = "html")
 display_html_viewer(tab_int_full_model$table)
 
 
@@ -234,7 +236,9 @@ p <- create_scatter_video(test_sample, "Test sample", x="cfo", y="tacc",
 
 # --- Additional analyses (not in the paper yet) -------------------------------
 
+prepare_fig_rolling_sample(test_sample, 20, "dd", "adjr2")
+prepare_fig_rolling_sample(test_sample, 20, "dd", "adjr2", balanced = FALSE)
+prepare_fig_rolling_sample(test_sample, 20, "dd", "ftadjr2")
+
 prepare_fig_corr_change_by_ind(test_sample)
-prepare_rolling_bs_figure(test_sample, 10, "level", "adjr2")
-prepare_rolling_bs_figure(test_sample, 20, "dd", "adjr2")
 
