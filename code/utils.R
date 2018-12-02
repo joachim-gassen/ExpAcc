@@ -183,7 +183,7 @@ fisher_trans_r2 <-  function(x) {
 }
 
 
-generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year") {
+generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year", minobs = 0) {
   df <- droplevels(df[complete.cases(df[,c(byvar, dvs, idvs)]), c(byvar, dvs, idvs)])
   t <- prepare_regression_table(df, dvs, idvs, byvar = byvar)
   res <- do.call("rbind", lapply(t$models, function(x) {
@@ -196,7 +196,7 @@ generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year") {
     ftadjr2 <- fisher_trans_r2(adjr2) 
     data.frame(byvalue, n, t(coef), t(se), r2, adjr2, ftadjr2,
                stringsAsFactors = FALSE, row.names = NULL)
-  }))
+  })) %>% filter(n >= minobs)
   colnames(res) <- c(byvar, "n", "const", paste0(idvs, "_est"), 
                      "const_se", paste0(idvs, "_se"), "r2", "adjr2", "ftadjr2")
   res <- res[-1,]

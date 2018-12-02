@@ -131,20 +131,20 @@ prepare_us_yearly_sample <- function(ts) {
   
   ys$year <- as.numeric(as.character(ys$year))
   
-  rr <- generate_byvar_regression_stats(ts, dvs = "tacc", idvs = "cfo")
+  rr <- generate_byvar_regression_stats(ts, dvs = "tacc", idvs = "cfo", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("level_", names(rr)[2:length(names(rr))])
   rr$year <- as.numeric(rr$year)
   ys <- left_join(ys, rr)
-  rr <- generate_byvar_regression_stats(ts, dvs = "dtacc", idvs = "dcfo")
+  rr <- generate_byvar_regression_stats(ts, dvs = "dtacc", idvs = "dcfo", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("change_", names(rr)[2:length(names(rr))])
   rr$year <- as.numeric(rr$year)
   ys <- left_join(ys, rr)
-  rr <- generate_byvar_regression_stats(ts, dvs = "tacc", idvs = c("lagcfo", "cfo", "leadcfo"))
+  rr <- generate_byvar_regression_stats(ts, dvs = "tacc", idvs = c("lagcfo", "cfo", "leadcfo"), minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("dd_", names(rr)[2:length(names(rr))])
   rr$year <- as.numeric(rr$year)
   ys <- left_join(ys, rr)
 
-  rr <- generate_byvar_regression_stats(ts, dvs = "sales", idvs = c("lagexpense", "expense", "leadexpense"))
+  rr <- generate_byvar_regression_stats(ts, dvs = "sales", idvs = c("lagexpense", "expense", "leadexpense"), minobs = 30)
   rr <- rr %>%
     mutate(year = as.numeric(year)) %>%
     rename(dt_adjr2 = adjr2) %>%
@@ -168,7 +168,7 @@ prepare_us_yearly_sample <- function(ts) {
   ys$country <- as.factor("USA")
   ys$cid <- ys$country 
   ys$yid <- ys$year
-  ys <- ys[, c(48, 1:47, 49, 50)]
+  ys <- ys[, c(51, 1:50, 52, 53)]
 
   return(as.data.frame(ys))
 }
@@ -319,17 +319,17 @@ prepare_int_yearly_sample <- function(is) {
                                      ff12ind == "Business Equipment") / n()) %>%
     mutate(ctr_year = paste0(as.character(country), "_", as.character(year)))  -> ys
   is$ctr_year <- factor(paste0(as.character(is$country), "_", as.character(is$year)))
-  rr <- generate_byvar_regression_stats(is, dvs = "tacc", idvs = "cfo", byvar = "ctr_year")
+  rr <- generate_byvar_regression_stats(is, dvs = "tacc", idvs = "cfo", byvar = "ctr_year", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("level_", names(rr)[2:length(names(rr))])
   ys <- left_join(ys, rr)
-  rr <- generate_byvar_regression_stats(is, dvs = "dtacc", idvs = "dcfo", byvar = "ctr_year")
+  rr <- generate_byvar_regression_stats(is, dvs = "dtacc", idvs = "dcfo", byvar = "ctr_year", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("change_", names(rr)[2:length(names(rr))])
   ys <- left_join(ys, rr)
-  rr <- generate_byvar_regression_stats(is, dvs = "tacc", idvs = c("lagcfo", "cfo", "leadcfo"), byvar = "ctr_year")
+  rr <- generate_byvar_regression_stats(is, dvs = "tacc", idvs = c("lagcfo", "cfo", "leadcfo"), byvar = "ctr_year", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("dd_", names(rr)[2:length(names(rr))])
   ys <- left_join(ys, rr)
   
-  rr <- generate_byvar_regression_stats(is, dvs = "sales", idvs = c("lagexpense", "expense", "leadexpense"), byvar = "ctr_year")
+  rr <- generate_byvar_regression_stats(is, dvs = "sales", idvs = c("lagexpense", "expense", "leadexpense"), byvar = "ctr_year", minobs = 30)
   rr <- rr %>%
     rename(dt_adjr2 = adjr2) %>%
     select(ctr_year, dt_adjr2)

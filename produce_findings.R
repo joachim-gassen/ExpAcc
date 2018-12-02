@@ -162,19 +162,18 @@ display_html_viewer(tab_full_model$table)
 # --- Prepare international analyses -------------------------------------------
 
 time_effects <- estimate_int_time_effect(int_ys_us)
-prepare_fig_time_effect_by_country(time_effects, "dd_adjr2_est")
+prepare_fig_time_effect_by_country(time_effects, "dd_adjr2")
 prepare_fig_time_effect_sbs(time_effects, "cfo")
 prepare_fig_time_effect_sbs(time_effects, "adjr2")
 
 tab_corr_yearly_int <- prepare_correlation_table(int_ys)
 display_html_viewer(tab_corr_yearly_int$kable_ret)
-tab_int <- prepare_tab_impact_cfo_dist(int_ys, model="dd", idv="cfo", 
-                                      format = "html")
-display_html_viewer(tab_int[[2]]$table)
 
 tab_int_full_model <- prepare_tab_full_model(int_ys, format = "html")
 display_html_viewer(tab_int_full_model$table)
 
+tab_int_full_model_fe <- prepare_tab_full_model_feffects(int_ys, format = "html")
+display_html_viewer(tab_int_full_model_fe$table)
 
 prepare_fig_yearly_fixed_effects(int_ys, "resid_cfo")
 prepare_fig_yearly_fixed_effects(int_ys, "resid_adjr2")
@@ -184,16 +183,14 @@ prepare_fig_yearly_fixed_effects(int_ys, "resid_adjr2")
 
 exp_abs_fname <- "paper/text_expand.txt"
 exp_abs <- readChar(exp_abs_fname, file.info(exp_abs_fname)$size)
-ys_def <- as.data.frame(read_csv("raw_data/ys_def.csv"))
+ys_def_expand <- as.data.frame(read_csv("raw_data/ys_def_expand.csv"))
 config_int <- readRDS("raw_data/exp_acc_config_int.RDS")
 config_us <- readRDS("raw_data/exp_acc_config_us.RDS")
 
-vars_for_expand <- c(1:14, 40, 15, 17, 21, 22, 24, 28,
-                     29, 31:33, 39, 41:50)
+vars_for_expand <- ys_def_expand$var_name
 
 int_ys_expand <- int_ys[,vars_for_expand]
 us_ys_expand <- us_ys[,vars_for_expand]
-ys_def_expand <- ys_def[vars_for_expand,]
 year_levels <-  unique(c(levels(us_ys$year), levels(int_ys$year)))
 int_ys_expand$year <- factor(int_ys_expand$year, 
                              levels = year_levels)
