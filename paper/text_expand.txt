@@ -8,7 +8,7 @@ Below you find a dynamic web page featuring four different samples:
 <li>The international country-year sample as contained in the paper. This is the default sample.
 <li>An international sample that also contains the U.S. data from the period 1988 - 2016.
 <li>The U.S. time-series sample as contained in the paper.
-<li>A U.S. time-series sample where I follow the methodology of Buschmann et al. as outline in the notes to their Table 4 in a verbatim fashion.
+<li>A U.S. time-series sample where I follow the methodology of Buschmann et al. as outlined in the notes to their Table 4 in a verbatim fashion.
 </ul>
 <p>
 All samples contain the same set of variables:
@@ -16,11 +16,10 @@ All samples contain the same set of variables:
 <li>A set of variables characterizing the cash flow distribution of the given country year. A subset of these is being used in the paper.
 <li>The independent variables as used in the paper.
 <li>A set of potential dependent variables for three different cash flow accrual models: 
-level (univariate regression of accruals on cash flow), changes (univariate regression of change in accruals on change in cash flow) a
-nd dd (a Dechow and Dichev type regression model). The paper presents mostly the findings for the Dechow and Dichev model.
+level (univariate regression of accruals on cash flow), changes (univariate regression of change in accruals on change in cash flow) and dd (a Dechow and Dichev type regression model). The paper presents mostly the findings for the Dechow and Dichev model.
 </ul>
 When you hover over the variable names in the descriptive table, a tool tip will indicate variable definitions. 
-I hope that the web app is mostly self-explanatory. You can subset the analysis to certain countries, if you like. Also, you can change the outlier treatment (as the data is based on annual statistics it should not be very outlier-prone but see for yourself). In an essence: Just scroll down, take a look around and select parameters in the menu bar to the left. Towards the bottom of the page you will find a "hover-able" scatter plot and a regression module that, by default, reports the results for the model contained in Column 6 of Table 10 of the paper. You should be able to reproduce any regression model contained in the paper by adjusting the sample and/or the regression parameters.
+I hope that the web app is mostly self-explanatory. You can subset the analysis to certain countries, if you like. Also, you can change the outlier treatment (as the data is based on annual statistics it should not be very outlier-prone but see for yourself). In an essence: Just scroll down, take a look around and select parameters in the menu bar to the left. Towards the bottom of the page you will find a "hover-able" scatter plot and a regression module that, by default, reports the results for the model contained in Column 6 of Table 9 in the paper. You should be able to reproduce any regression model contained in the paper by adjusting the sample and/or the regression parameters.
 <p>
 If something is not working or if you want to share your views, please get in touch. You will find my contact info at the footer of this page. 
 <p>

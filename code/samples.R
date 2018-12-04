@@ -67,7 +67,6 @@ prepare_us_samples <- function() {
                         "is.finite(cfo)",
                         "is.finite(tacc)")) %>%
     winsorize(exclude = "mv", byval = "year") %>%
-#    winsorize(include = c("cfo", "tacc"), byval = "year") %>%
     select_variables(c(vd$var_name)) %>%
     group_by(gvkey) %>%
     mutate(leadcfo = mleadlag(cfo, 1, year),
@@ -75,8 +74,8 @@ prepare_us_samples <- function() {
            dcfo = cfo_uw - mleadlag(cfo_uw, -1, year),
            lagdcfo = mleadlag(dcfo, -1, year),
            dtacc = tacc - mleadlag(tacc, -1, year),
-           leadexpense = mleadlag(expense, 1, year),
-           lagexpense = mleadlag(expense, -1, year)) %>% 
+           leadexpenses = mleadlag(expenses, 1, year),
+           lagexpenses = mleadlag(expenses, -1, year)) %>% 
     filter(year > 1963, year < 2015)
   
   rep_sample <- droplevels(as.data.frame(rep_sample))
@@ -90,7 +89,6 @@ prepare_us_samples <- function() {
                         "is.finite(tacc)",
                         "avg_at >= 7.5")) %>%
     winsorize(exclude = "mv", byval = "year") %>%
-#    winsorize(include = c("cfo", "tacc"), byval = "year") %>%
     select_variables(c(vd$var_name)) %>%
     group_by(gvkey) %>%
     mutate(leadcfo = mleadlag(cfo, 1, year),
@@ -98,14 +96,38 @@ prepare_us_samples <- function() {
            dcfo = cfo - mleadlag(cfo, -1, year),
            lagdcfo = mleadlag(dcfo, -1, year),
            dtacc = tacc - mleadlag(tacc, -1, year),
-           leadexpense = mleadlag(expense, 1, year),
-           lagexpense = mleadlag(expense, -1, year)) %>% 
+           leadexpenses = mleadlag(expenses, 1, year),
+           lagexpenses = mleadlag(expenses, -1, year)) %>% 
     filter(year > 1963, year < 2015)
 
   test_sample <- droplevels(as.data.frame(test_sample))
   test_sample$year <- as.ordered(test_sample$year)
   
-  return(mget(c("raw_sample", "rep_sample", "test_sample")))
+  blz_tab4_sample <- raw_sample %>%  
+    apply_screen(list("((as.numeric(as.character(sic)) < 6000) | 
+                      (as.numeric(as.character(sic)) > 6999))",
+                      "(aqs/sale < 0.05)",
+                      "is.finite(cfo)",
+                      "is.finite(tacc)",
+                      "avg_at >= 7.5")) %>%
+    winsorize(include = c("cfo", "tacc"), byval = "year") %>%
+    select_variables(c(vd$var_name)) %>%
+    group_by(gvkey) %>%
+    mutate(leadcfo = mleadlag(cfo, 1, year),
+           lagcfo = mleadlag(cfo, -1, year),
+           dcfo = cfo - mleadlag(cfo, -1, year),
+           lagdcfo = mleadlag(dcfo, -1, year),
+           dtacc = tacc - mleadlag(tacc, -1, year),
+           leadexpenses = mleadlag(expenses, 1, year),
+           lagexpenses = mleadlag(expenses, -1, year)) %>% 
+    filter(year > 1963, year < 2014,
+           is.finite(lagcfo),
+           is.finite(leadcfo))
+  
+  blz_tab4_sample <- droplevels(as.data.frame(blz_tab4_sample))
+  blz_tab4_sample$year <- as.ordered(blz_tab4_sample$year)
+  
+  return(mget(c("raw_sample", "rep_sample", "test_sample", "blz_tab4_sample")))
 }
 
 
@@ -114,16 +136,16 @@ prepare_us_yearly_sample <- function(ts) {
     group_by(gvkey) %>%
     group_by(year) %>%
     summarise(cfo_mean = mean(cfo),
-              cfo_sd = sd(cfo_uw),
+              cfo_sd = sd(cfo),
               cfo_skew = skewness(cfo),
               cfo_kurt = kurtosis(cfo),
               cfo_min = min(cfo),
               cfo_max = max(cfo),
               cfo_pneg = sum(as.numeric(cfo < 0))/n(),
               dcfo_acorr = cor(dcfo, lagdcfo, use = "na.or.complete"),
-              std_oi_pti = sd(oi - pti, na.rm = TRUE),
+              sd_oi_pti = sd(oi - pti, na.rm = TRUE),
               pctloss = sum(as.numeric(e < 0))/n(),
-              sgaint = mean(sgaint, na.rm = TRUE),
+              sgaint_mean = mean(sgaint, na.rm = TRUE),
               share_int_ind = sum(ff12ind == "Healthcare, Medical Equipment, and Drugs" |
                                      ff12ind == "Chemicals and Allied Products" |
                                      ff12ind == "Telephone and Television Transmission" |
@@ -144,7 +166,7 @@ prepare_us_yearly_sample <- function(ts) {
   rr$year <- as.numeric(rr$year)
   ys <- left_join(ys, rr)
 
-  rr <- generate_byvar_regression_stats(ts, dvs = "sales", idvs = c("lagexpense", "expense", "leadexpense"), minobs = 30)
+  rr <- generate_byvar_regression_stats(ts, dvs = "sales", idvs = c("lagexpenses", "expenses", "leadexpenses"), minobs = 30)
   rr <- rr %>%
     mutate(year = as.numeric(year)) %>%
     rename(dt_adjr2 = adjr2) %>%
@@ -247,8 +269,8 @@ prepare_int_samples <- function() {
            dcfo = cfo - mleadlag(cfo, -1, year),
            lagdcfo = mleadlag(dcfo, -1, year),
            dtacc = tacc - mleadlag(tacc, -1, year),
-           leadexpense = mleadlag(expense, 1, year),
-           lagexpense = mleadlag(expense, -1, year)) %>%
+           leadexpenses = mleadlag(expenses, 1, year),
+           lagexpenses = mleadlag(expenses, -1, year)) %>%
     filter(as.numeric(as.character(year)) < 2017) ->
     int_base_sample
   
@@ -282,8 +304,8 @@ prepare_int_samples <- function() {
   us <- droplevels(test_sample[test_sample$year > 1988,])
   us$country <- "USA"
   us$country_name <- "United States of America"
-  vars <- c("country", "country_name", "year", "gvkey", "ff12ind", "e", "cfo", "tacc", "sales", "expense", "sgaint", "oi", "pti", 
-            "leadcfo", "lagcfo", "dcfo", "lagdcfo", "dtacc", "lagexpense", "leadexpense")
+  vars <- c("country", "country_name", "year", "gvkey", "ff12ind", "e", "cfo", "tacc", "sales", "expenses", "sgaint", "oi", "pti", 
+            "leadcfo", "lagcfo", "dcfo", "lagdcfo", "dtacc", "lagexpenses", "leadexpenses")
 
   all_20_sample <- rbind(us[, vars], int_20_sample[, vars])
   all_20_sample_obs <- rbind(list(country = "USA", 
@@ -310,9 +332,9 @@ prepare_int_yearly_sample <- function(is) {
               cfo_max = max(cfo),
               cfo_pneg = sum(as.numeric(cfo < 0))/n(),
               dcfo_acorr = cor(dcfo, lagdcfo, use = "na.or.complete"),
-              std_oi_pti = sd(oi - pti, na.rm = TRUE),
+              sd_oi_pti = sd(oi - pti, na.rm = TRUE),
               pctloss = sum(as.numeric(e < 0))/n(),
-              sgaint = mean(sgaint, na.rm = TRUE),
+              sgaint_mean = mean(sgaint, na.rm = TRUE),
               share_int_ind = sum(ff12ind == "Healthcare, Medical Equipment, and Drugs" |
                                      ff12ind == "Chemicals and Allied Products" |
                                      ff12ind == "Telephone and Television Transmission" |
@@ -329,7 +351,7 @@ prepare_int_yearly_sample <- function(is) {
   names(rr)[2:length(names(rr))] <- paste0("dd_", names(rr)[2:length(names(rr))])
   ys <- left_join(ys, rr)
   
-  rr <- generate_byvar_regression_stats(is, dvs = "sales", idvs = c("lagexpense", "expense", "leadexpense"), byvar = "ctr_year", minobs = 30)
+  rr <- generate_byvar_regression_stats(is, dvs = "sales", idvs = c("lagexpenses", "expenses", "leadexpenses"), byvar = "ctr_year", minobs = 30)
   rr <- rr %>%
     rename(dt_adjr2 = adjr2) %>%
     select(ctr_year, dt_adjr2)

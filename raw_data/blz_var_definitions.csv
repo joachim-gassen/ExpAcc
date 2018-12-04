@@ -18,7 +18,7 @@ cfo,"ifelse(year > 1987, oancf/avg_at, e - tacc_pre_1988)",numerical,0
 tacc_uw,tacc,numerical,1
 cfo_uw,cfo,numerical,1
 sales,sale/avg_at,numerical,1
-expense,(sale - ib)/avg_at,numerical,1
+expenses,(sale - ib)/avg_at,numerical,1
 sgaint,xsga/(sale - ib),numerical,1
 oi,oiadp/avg_at,numerical,1
 pti,pi/avg_at,numerical,1
