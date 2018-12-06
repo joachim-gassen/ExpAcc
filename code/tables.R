@@ -61,3 +61,12 @@ prepare_tab_full_model_feffects <- function(ys, format = "latex") {
   tab <- add_vif_to_reg_table(tab, 1:5, format) 
   return(tab)
 }
+
+prepare_tab_mcoll <- function(data, model, factor = 1, format = "latex", ...) {
+  vars <- names(model$coefficients)[2:length(names(model$coefficients))]
+  range <- factor * sapply(data[,vars], sd)
+  attach(data)
+  retp <- perturb(model, pvars = vars, prange = range)
+  detach(data)
+  kableExtra::kable(summary(retp)$summ, format, ...)
+}

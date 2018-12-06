@@ -106,7 +106,7 @@ if (versionInfo()$version <= "1.1.67")
 
 pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
           "lubridate", "broom", "moments", "Hmisc", "RCurl", "ggridges", 
-          "latex2exp", "RPostgres", "DBI", "ExPanDaR",
+          "latex2exp", "RPostgres", "DBI", "ExPanDaR", "perturb",
           "thomasp85/gganimate@81e8234")
 
 # Instal packages (if not already installed) 
@@ -154,6 +154,12 @@ display_html_viewer(tab_blz_tab4$table)
 
 tab_blz_univariate <- prepare_tab_blz_univariate(us_ys, format = "html")
 display_html_viewer(tab_blz_univariate$table)
+
+mod1 <- lm(data = us_ys, dd_adjr2 ~ time + cfo_sd + dcfo_acorr + sd_oi_pti + pctloss + dt_adjr2 + sgaint_mean)
+tab_mcoll <- prepare_tab_mcoll(us_ys, mod1, format ="html", factor = 0.1)
+colldiag(mod1)
+display_html_viewer(tab_mcoll)
+
 
 prepare_fig_level_by_cfo(test_sample, "cfo_est")
 prepare_fig_level_by_cfo(test_sample, "adjr2")
