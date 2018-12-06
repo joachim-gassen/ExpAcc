@@ -160,6 +160,12 @@ tab_mcoll <- prepare_tab_mcoll(us_ys, mod1, format ="html", factor = 0.1)
 colldiag(mod1)
 display_html_viewer(tab_mcoll)
 
+mod2 <- lm(data = us_ys, dd_adjr2 ~ time + cfo_mean + cfo_sd + cfo_skew + 
+             rel_msize + share_int_ind)
+tab_mcoll_full <- prepare_tab_mcoll(us_ys, mod2, format ="html", factor = 0.1)
+display_html_viewer(tab_mcoll_full)
+colldiag(mod2)
+
 
 prepare_fig_level_by_cfo(test_sample, "cfo_est")
 prepare_fig_level_by_cfo(test_sample, "adjr2")
