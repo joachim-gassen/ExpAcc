@@ -1,12 +1,12 @@
 # ExpAcc: Explore the Accrual Landscape
 
-This is the code repository for the paper [Bierey and Gassen (2018), Exploring the Accrual Landscape](https://www.wiwi.hu-berlin.de/rewe/research/expacc_paper.pdf).
+This is the code repository for the paper [Gassen (2018), Exploring the Accrual Landscape by Open Science](https://www.wiwi.hu-berlin.de/rewe/research/expacc_paper.pdf).
 
-In this early stage project, we replicate and extend the key findings of [Bushman, Lerman and Zhang (JAR, 2016): The Changing Landscape of Accrual Accounting](http://onlinelibrary.wiley.com/doi/10.1111/1475-679X.12100/abstract) by investigating the role of changes in the underlying cash flow distribution across time and by verifying their and our key findings for an international sample.
+In this project, I reproduce and extend the findings of [Bushman, Lerman and Zhang (JAR, 2016): The Changing Landscape of Accrual Accounting](http://onlinelibrary.wiley.com/doi/10.1111/1475-679X.12100/abstract).
 
-Please refer to the Appendix of our paper for additional guidance on how to reproduce our work using R and RStudio.
+You will need WRDS access to Compustat (North America and Global) to reproduce the analysis. In addition you need either to have R and RStudio installed or access to docker (see below). Please refer to the Appendix B in the paper for additional guidance on how to reproduce the analysis.
 
-If you have access to a [docker installation](https://www.docker.com), an even more straight-forward way is to use the docker container that is also contained in this repository.
+If you have access to a [docker installation](https://www.docker.com), the most straight-forward way is to use the docker container that is also contained in this repository.
 
 1. Check the Docker settings to make sure that you have at least 2 CPUs, 4 GB of memory and 1 GB of swap space available for Docker
 
@@ -25,4 +25,4 @@ If you have access to a [docker installation](https://www.docker.com), an even m
 
 8. Wait and explore
 
-Please get in touch if you enounter something odd and/or interesting. Open an issue on Github or send an email to gassen@wiwi.hu-berlin.de. Thanks!
+Please get in touch if you encounter something odd and/or interesting. Open an issue on Github or send an email to gassen@wiwi.hu-berlin.de. Thanks!

@@ -27,7 +27,7 @@ RUN tlmgr update --self
 
 RUN tlmgr install multirow xcolor colortbl wrapfig float tabu varwidth threeparttable \
                   threeparttablex environ trimspaces ulem makecell endfloat setspace \
-                  footmisc \
+                  footmisc csquotes\
   && tlmgr path add 
 
 # The below invalidates the cache whenever the Head of the Github repo changes

@@ -96,7 +96,10 @@ winsorize <- function(df, percentile = 0.01, include=NULL, exclude=NULL, byval=N
   if (!is.null(exclude) & !is.null(include)) 
     stop("You can only set exclude or include, not both.")
   if (!is.null(exclude)) vars <- !(names(df) %in% exclude)
-  else if (!is.null(include)) vars <- names(df) %in% include
+  else if (!is.null(include)) {
+    if (!is.null(byval)) include <- c(byval, include) 
+    vars <- names(df) %in% include
+  }
   else vars <- names(df)
   ret <- df
   ret[vars] <- treat_outliers(ret[vars], percentile, by = byval)
@@ -180,7 +183,7 @@ fisher_trans_r2 <-  function(x) {
 }
 
 
-generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year") {
+generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year", minobs = 0) {
   df <- droplevels(df[complete.cases(df[,c(byvar, dvs, idvs)]), c(byvar, dvs, idvs)])
   t <- prepare_regression_table(df, dvs, idvs, byvar = byvar)
   res <- do.call("rbind", lapply(t$models, function(x) {
@@ -189,12 +192,13 @@ generate_byvar_regression_stats <- function(df, dvs, idvs, byvar = "year") {
     coef <- x$model$coefficients
     se <- x$model$se
     r2 <- summary(x$model)$r.squared 
-    adjr2 <- summary(x$model)$adj.r.squared 
-    data.frame(byvalue, n, t(coef), t(se), r2, adjr2,
+    adjr2 <- summary(x$model)$adj.r.squared
+    ftadjr2 <- fisher_trans_r2(adjr2) 
+    data.frame(byvalue, n, t(coef), t(se), r2, adjr2, ftadjr2,
                stringsAsFactors = FALSE, row.names = NULL)
-  }))
+  })) %>% filter(n >= minobs)
   colnames(res) <- c(byvar, "n", "const", paste0(idvs, "_est"), 
-                     "const_se", paste0(idvs, "_se"), "r2", "adjr2")
+                     "const_se", paste0(idvs, "_se"), "r2", "adjr2", "ftadjr2")
   res <- res[-1,]
   return(res)
 }
@@ -256,28 +260,38 @@ vif.felm <- function (fit) {
 
 
 add_vif_to_reg_table <- function(m, col, format = "latex") {
-  vif <- sapply(col, function(x) vif.felm(m$models[[x]]$model))
+  vif <- lapply(col, function(x) vif.felm(m$models[[x]]$model))
+  for (i in 1:length(m$models)) {
+    lhs <- rownames(m$models[[i]]$model$coefficients)
+    if (i == 1) lhsvars <- lhs else
+      lhsvars <- c(lhsvars, lhs[which(!lhs %in% lhsvars)])
+  } 
+  lhsvars <- lhsvars[!lhsvars %in% "(Intercept)"] 
   if (format == "html") {
-    # not tested
     str_in <- '<tr><td style=\"text-align:left\"></td>'
     for (i in 1:length(m$models)) {
-      if (i %in% col) str_in <- paste0(str_in, '<td>[',
-                                       format(vif[,which(col == i)], trim=TRUE, digit = 2, nsmall = 2),
-                                       ']</td>')
-      else str_in <- paste0(str_in, '</td><td>')
+      vif_strings <- rep("", length(lhsvars))
+      if (i %in% col) {
+        vif_strings[which(lhsvars %in% names(vif[[which(col == i)]]))] <- 
+          paste0('[', format(vif[[which(col == i)]], trim=TRUE, digit = 2, nsmall = 2), ']')
+        str_in <- paste0(str_in, '<td>',vif_strings ,'</td>')
+      } else str_in <- paste0(str_in, '</td><td>')
     }
     str_in <- paste0(str_in, '</tr>')
   } else if (format == "latex") {
     str_in <- "  & "
     for (i in 1:length(m$models)) {
-      if (i %in% col) str_in <- paste0(str_in, '[',
-                                       format(vif[,which(col == i)], trim=TRUE, digit = 2, nsmall = 2),
-                                       '] & ')
-      else if (i != length(m$models)) str_in <- paste0(str_in, '& ')
+      vif_strings <- rep("", length(lhsvars))
+      if (i %in% col) {
+        vif_strings[which(lhsvars %in% names(vif[[which(col == i)]]))] <- 
+          paste0('[', format(vif[[which(col == i)]], trim=TRUE, digit = 2, nsmall = 2), ']')
+        str_in <- paste0(str_in, vif_strings)
+      } 
+      if (i != length(m$models)) str_in <- paste0(str_in, ' & ')
     }
     str_in <- paste0(str_in, '\\\\ ')
   } else stop("Unkonwn format.")
-  for (pos in 1:nrow(vif))
+  for (pos in 1:length(lhsvars))
     m$table <- append(m$table, str_in[pos], ifelse(format == "html", 3, 12) + 4*pos)
   return(m)
 }
@@ -295,12 +309,12 @@ return_estimates <- function(data, eq) {
 estimate_int_time_effect <- function(cys) {
   cys %>%
     group_by(country) %>%
-    do(base_cfo = return_estimates(data = ., level_cfo_est ~ time),
-       base_adjr2 = return_estimates(data = ., level_adjr2 ~ time),
-       full_cfo = return_estimates(data = ., level_cfo_est ~ time + cfo_mean + cfo_sd  + cfo_skew + cfo_kurt),
-       full_adjr2 = return_estimates(data = ., level_adjr2 ~ time + cfo_mean + cfo_sd  + cfo_skew + cfo_kurt),
-       resid_cfo = return_estimates(data = ., level_resid_cfo ~ time), 
-       resid_adjr2 = return_estimates(data = ., level_resid_adjr2 ~ time)) %>%
+    do(level_cfo = return_estimates(data = ., level_cfo_est ~ time),
+       level_adjr2 = return_estimates(data = ., level_adjr2 ~ time),
+       change_dcfo = return_estimates(data = ., change_dcfo_est ~ time),
+       change_adjr2 = return_estimates(data = ., change_adjr2 ~ time),
+       dd_cfo = return_estimates(data = ., dd_cfo_est ~ time),
+       dd_adjr2 = return_estimates(data = ., dd_adjr2 ~ time)) %>%
     unnest(.sep = "_") -> estimates
   return(data.frame(estimates))
 }

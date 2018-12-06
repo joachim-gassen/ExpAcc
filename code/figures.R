@@ -306,15 +306,14 @@ prepare_fig_cfo_density_ridge <- function(ts) {
 }
 
 
-prepare_fig_time_effect_sbs <- function(e, test) {
-   if (test == "cfo") {
-    e <- e[order(e$base_cfo_est),]
-    e <- select(e, country, matches("cfo"))
-    ylab_text <- expression(paste(b[1], ", dependent variable: ", beta[1]))
-  } else {
-    e <- e[order(e$base_adjr2_est),]
-    e <- select(e, country, matches("adjr2"))
+prepare_fig_time_effect_by_country <- function(e, var) {
+  e <- e[order(e[, paste0(var, "_est")]),]
+  e <- select(e, country, matches(var))
+  if (grepl("adjr2", var)) {
     ylab_text <- expression(paste(b[1], ", dependent variable: Adj. ", R^2))
+  } else {
+    if (grepl("dd", var)) ylab_text <- expression(paste(b[1], ", dependent variable: ", beta[2]))
+    else ylab_text <- expression(paste(b[1], ", dependent variable: ", beta[1]))
   }
   e$country <- factor(e$country, levels = e$country)
   e %>% 
@@ -322,15 +321,10 @@ prepare_fig_time_effect_sbs <- function(e, test) {
     extract(model_statistic, c("model", "statistic"), "(.*)_(.*)") %>%
     spread(statistic, value) -> elong
   
-  elong$model[grep("base", elong$model)] <- "Model (2)"
-  elong$model[grep("full", elong$model)] <- "Model (3)"
-  elong$model[grep("resid", elong$model)] <- "Model (4)"
-
   ep <- ggplot(elong, aes(country)) +
     geom_hline(yintercept = 0, colour = gray(1/2), lty = 2) +
     geom_pointrange(aes(y = est, ymin = lb95, ymax = ub95),
                     lwd = 1/2, fatten = 0.5, position = position_dodge(width = 1/2)) +
-    facet_grid(model ~ .) + 
     theme_bw() +
     theme(strip.background = element_blank()) + 
     theme(axis.text.x = element_text(angle = 90, vjust = 0.3, hjust = 1)) +
@@ -383,13 +377,16 @@ prepare_fig_yearly_fixed_effects <- function(ys, model) {
 }
 
 
-prepare_rolling_bs_figure <- function(ts, years, model, testvar) {
+prepare_fig_rolling_sample <- function(ts, years, model, testvar, balanced = TRUE) {
   for (i in (1963 + years):2014) {
     df <- ts %>% 
       group_by(gvkey) %>%
       filter((as.numeric(as.character(year)) <= i) & 
-               (as.numeric(as.character(year)) > i - years)) %>%
-      filter(n() == years)
+               (as.numeric(as.character(year)) > i - years)) 
+    
+    if (balanced) 
+      df <- df %>%
+        filter(n() == years)
     
     if (i == 1963 + years) res <- c(year = i, nobs = nrow(df), 
                             unlist(do_time_reg_test(df, model, testvar)))
@@ -462,7 +459,9 @@ prepare_fig_corr_change_by_ind <- function(ts) {
           panel.grid.minor = element_blank(),
           strip.background = element_blank(),
           legend.position = "bottom",
-          legend.direction = "vertical") + 
+          legend.direction = "vertical",
+          legend.text = element_text(size=6),
+          legend.title = element_text(size=7)) + 
     labs(color ="Sector (Fama French 12 Industries)", 
          size = "Number of observations",
          alpha = TeX("\\mathit{YEAR} > 1989")) +

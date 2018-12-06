@@ -1,42 +1,72 @@
 # (C) Joachim Gassen 2018, gassen@wiwi.hu-berlin.de,see LICENSE file for details 
 #
-# This code contains functions needed to prepare the tables of Bierey and Gassen (2018) 
+# This code contains functions needed to prepare the tables of Gassen (2018) 
 # Depends on ("code/utils.R") being sourced
 
-prepare_tab_impact_cfo_dist_us <- function(ys, model = "level", idv = "cfo", format = "latex") {
-  dv_coef <- paste0(model, "_", idv, "_est")
-  dv_adjr2 <- paste0(model, "_adjr2")
-  resid_coef <- paste0(model, "_resid_", idv)
-  resid_adjr2 <- paste0(model, "_resid_adjr2")
-  tcfo <- prepare_regression_table(ys, dvs = c(rep(dv_coef, 6), resid_coef),
-                                   idvs = list("time", "cfo_mean", "cfo_sd", "cfo_skew", "cfo_kurt", 
-                                               c("time", "cfo_mean", "cfo_sd", "cfo_skew", "cfo_kurt"),
-                                               "time"), format = format)
-  tadjr2 <- prepare_regression_table(ys, dvs = c(rep(dv_adjr2, 6), resid_adjr2),
-                                     idvs = list("time", "cfo_mean", "cfo_sd", "cfo_skew", "cfo_kurt",
-                                                 c("time", "cfo_mean", "cfo_sd", "cfo_skew", "cfo_kurt"),
-                                                 "time"), format = format)
-  tcfo <- add_vif_to_reg_table(tcfo, 6, format) 
-  tadjr2 <- add_vif_to_reg_table(tadjr2, 6, format)
-  return(list(tcfo, tadjr2))
+prepare_tab_blz_tab4 <- function(ys, format = "latex", feffects = rep("", 6), clusters = rep("", 6)) {
+  tab <- prepare_regression_table(ys, dvs = rep("dd_adjr2", 6),
+                                   idvs = list("time", 
+                                               c("time", "cfo_sd", "dcfo_acorr"),
+                                               c("time", "sd_oi_pti", "pctloss"),
+                                               c("time", "dt_adjr2"),
+                                               c("time", "sgaint_mean"),
+                                               c("time", "cfo_sd", "dcfo_acorr", "sd_oi_pti", "pctloss", "dt_adjr2", "sgaint_mean")), 
+                                  feffects = feffects, clusters = clusters, format = format)
+  tab <- add_vif_to_reg_table(tab, 2:6, format) 
+  return(tab)
 }
 
 
-prepare_tab_impact_cfo_dist_int <- function(ys, model = "level", idv = "cfo", format = "latex") {
-  dv_coef <- paste0(model, "_", idv, "_est")
-  dv_adjr2 <- paste0(model, "_adjr2")
-  resid_coef <- paste0(model, "_resid_", idv)
-  resid_adjr2 <- paste0(model, "_resid_adjr2")
-  t <- prepare_regression_table(ys, dvs = c(dv_coef, dv_coef, resid_coef, dv_adjr2, dv_adjr2, resid_adjr2),
-                                idvs = list("time",
-                                            c("time", "cfo_mean", "cfo_sd", "cfo_skew", "cfo_kurt"),
-                                            "time",
-                                            "time",
-                                            c("time", "cfo_mean", "cfo_sd", "cfo_skew", "cfo_kurt"),
-                                            "time"),
-                                feffects = list("country", "country", "country", "country", "country", "country"),
-                                clusters = list("country", "country", "country", "country", "country", "country"),
-                                format = format)
-  t <- add_vif_to_reg_table(t, c(2,5), format) 
-  return(t)
+prepare_tab_blz_univariate <- function(ys, format = "latex", feffects = rep("", 8), clusters = rep("", 8)) {
+  tab <- prepare_regression_table(ys, dvs = rep("dd_adjr2", 8),
+                                  idvs = list("time", "cfo_sd", "dcfo_acorr", "sd_oi_pti", "pctloss", "dt_adjr2", "sgaint_mean",
+                                              c("time", "sd_oi_pti", "pctloss", "sgaint_mean")), 
+                                  feffects = feffects, clusters = clusters, format = format)
+  tab <- add_vif_to_reg_table(tab, 8, format) 
+  return(tab)
+}
+
+
+prepare_tab_full_model <- function(ys, format = "latex") {
+  tab <- prepare_regression_table(ys, dvs = rep("dd_adjr2", 6),
+                                  idvs = list("time", 
+                                              c("time", "cfo_mean", "cfo_sd", "cfo_skew"),
+                                              c("time","sd_oi_pti", "pctloss", "sgaint_mean"), 
+                                              c("time", "rel_msize", "share_int_ind"), 
+                                              c("time", "cfo_mean", "cfo_sd", "cfo_skew",
+                                                "rel_msize", "share_int_ind"),
+                                              c("time", "cfo_mean", "cfo_sd", "cfo_skew", 
+                                                "sd_oi_pti", "pctloss", "sgaint_mean",
+                                                "rel_msize", "share_int_ind")),
+                                  format = format,
+                                  feffects = c(rep(list("country"), 6)), 
+                                  clusters = c(rep(list("country"), 6)))
+  tab <- add_vif_to_reg_table(tab, 2:6, format) 
+  return(tab)
+}
+
+
+prepare_tab_full_model_feffects <- function(ys, format = "latex") {
+  tab <- prepare_regression_table(ys, dvs = rep("dd_adjr2", 5),
+                                  idvs = list(c("cfo_mean", "cfo_sd", "cfo_skew"),
+                                              c("sd_oi_pti", "pctloss", "sgaint_mean"), 
+                                              c("rel_msize", "share_int_ind"), 
+                                              c("cfo_mean", "cfo_sd", "cfo_skew",
+                                                "rel_msize", "share_int_ind"),
+                                              c("cfo_mean", "cfo_sd", "cfo_skew", 
+                                                "sd_oi_pti", "pctloss", "sgaint_mean",
+                                                "rel_msize", "share_int_ind")), format = format,
+                                  feffects = c(rep(list(c("country", "year")), 5)), 
+                                  clusters = c(rep(list(c("country", "year")), 5)))
+  tab <- add_vif_to_reg_table(tab, 1:5, format) 
+  return(tab)
+}
+
+prepare_tab_mcoll <- function(data, model, factor = 1, format = "latex", ...) {
+  vars <- names(model$coefficients)[2:length(names(model$coefficients))]
+  range <- factor * sapply(data[,vars], sd)
+  attach(data)
+  retp <- perturb(model, pvars = vars, prange = range)
+  detach(data)
+  kableExtra::kable(summary(retp)$summ, format, ...)
 }

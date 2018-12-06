@@ -126,7 +126,9 @@ if (pull_wrds_data) source("code/pull_wrds_data.R", local = new.env())
 list2env(prepare_us_samples(), environment())
 list2env(prepare_int_samples(), environment())
 us_ys <- prepare_us_yearly_sample(test_sample)
-int_ys <- prepare_int_yearly_sample(all20_ctry_sample)
+us_ys_blz <- prepare_us_yearly_sample(blz_tab4_sample)
+int_ys <- prepare_int_yearly_sample(int_20_sample)
+int_ys_us <- prepare_int_yearly_sample(all_20_sample)
 
 
 # --- Prepare US analyses ------------------------------------------------------
@@ -134,70 +136,99 @@ int_ys <- prepare_int_yearly_sample(all20_ctry_sample)
 prepare_fig_rep_blz_results(us_ys, "level", "cfo")
 prepare_fig_rep_blz_results(us_ys, "change", "dcfo")
 prepare_fig_rep_blz_results(us_ys, "dd", "cfo")
-prepare_fig_level_by_at(test_sample, "cfo_est")
-prepare_fig_level_by_ind(test_sample, "cfo_est")
+
+vars_fyr <- c("e", "tacc", "lagcfo", "cfo", "leadcfo", "mv", "bm", "sgaint")
+tab_desc_us_fyr <- prepare_descriptive_table(test_sample[, vars_fyr])
+display_html_viewer(tab_desc_us_fyr$kable_ret)
+
+vars_us_yr <- c("dd_adjr2", "cfo_sd", "dcfo_acorr", "sd_oi_pti", "pctloss", "dt_adjr2", "sgaint_mean")
+tab_desc_us_yr <- prepare_descriptive_table(us_ys[, vars_us_yr])
+display_html_viewer(tab_desc_us_yr$kable_ret)
+
+vars_us_yr <- c(vars_us_yr[1], "time", vars_us_yr[2:length(vars_us_yr)])
+tab_corr_us_yr <- prepare_correlation_table(us_ys[, vars_us_yr])
+display_html_viewer(tab_corr_us_yr$kable_ret)
+
+tab_blz_tab4 <- prepare_tab_blz_tab4(us_ys, format = "html")
+display_html_viewer(tab_blz_tab4$table)
+
+tab_blz_univariate <- prepare_tab_blz_univariate(us_ys, format = "html")
+display_html_viewer(tab_blz_univariate$table)
+
 prepare_fig_level_by_cfo(test_sample, "cfo_est")
 prepare_fig_level_by_cfo(test_sample, "adjr2")
 prepare_fig_level_comp(test_sample, "cfo")
 prepare_fig_scatter_sbs(test_sample)
 prepare_fig_cfo_density_ridge(test_sample)
-
-tab_corr_yearly_us <- prepare_correlation_table(us_ys)
-display_html_viewer(tab_corr_yearly_us$kable_ret)
-tab_us <- prepare_tab_impact_cfo_dist_us(us_ys, model="dd", idv="cfo", 
-                                         format = "html")
-display_html_viewer(tab_us[[1]]$table)
-display_html_viewer(tab_us[[2]]$table)
+prepare_fig_rolling_sample(test_sample, 20, "dd", "adjr2")
+prepare_fig_rolling_sample(test_sample, 20, "dd", "ftadjr2")
+prepare_fig_rolling_sample(test_sample, 20, "dd", "adjr2", balanced = FALSE)
+prepare_fig_corr_change_by_ind(test_sample)
 
 
 # --- Prepare international analyses -------------------------------------------
 
-time_effects <- estimate_int_time_effect(int_ys)
+time_effects <- estimate_int_time_effect(int_ys_us)
+prepare_fig_time_effect_by_country(time_effects, "dd_adjr2")
 
-prepare_fig_time_effect_sbs(time_effects, "cfo")
-prepare_fig_time_effect_sbs(time_effects, "adjr2")
-tab_int <- prepare_tab_impact_cfo_dist_int(int_ys, format = "html")
-display_html_viewer(tab_int$table)
-prepare_fig_yearly_fixed_effects(int_ys, "resid_cfo")
-prepare_fig_yearly_fixed_effects(int_ys, "resid_adjr2")
+vars_int_yr <- c("dd_adjr2", "cfo_mean", "cfo_sd", "cfo_skew", "sd_oi_pti", "pctloss", "sgaint_mean", "rel_msize", "share_int_ind")
+tab_desc_int_yr <- prepare_descriptive_table(int_ys[, vars_int_yr])
+display_html_viewer(tab_desc_int_yr$kable_ret)
+
+vars_int_yr <- c(vars_int_yr[1], "time", vars_int_yr[2:length(vars_int_yr)])
+tab_corr_int_yr <- prepare_correlation_table(int_ys[, vars_int_yr])
+display_html_viewer(tab_corr_int_yr$kable_ret)
+
+tab_int_full_model <- prepare_tab_full_model(int_ys, format = "html")
+display_html_viewer(tab_int_full_model$table)
+
+tab_int_full_model_fe <- prepare_tab_full_model_feffects(int_ys, format = "html")
+display_html_viewer(tab_int_full_model_fe$table)
 
 
 # --- Start up the ExPanD app to explore the country year sample ---------------
 
 exp_abs_fname <- "paper/text_expand.txt"
 exp_abs <- readChar(exp_abs_fname, file.info(exp_abs_fname)$size)
-ys_def <- readRDS("raw_data/ys_def.RDS")
+ys_def_expand <- as.data.frame(read_csv("raw_data/ys_def_expand.csv"))
 config_int <- readRDS("raw_data/exp_acc_config_int.RDS")
-config_us <- readRDS("raw_data/exp_acc_config_us.RDS")
 
-vars_for_expand <- c(1:11, 13:14, 18, 37:38,
-                     20:21, 25, 39:40,
-                     27:30, 36, 41:42,
-                     43:45)
+vars_for_expand <- ys_def_expand$var_name
+
 int_ys_expand <- int_ys[,vars_for_expand]
+int_ys_us_expand <- int_ys_us[,vars_for_expand]
 us_ys_expand <- us_ys[,vars_for_expand]
-ys_def_expand <- ys_def[vars_for_expand,]
+us_ys_blz_expand <- us_ys_blz[,vars_for_expand]
+year_levels <-  unique(c(levels(us_ys$year), levels(int_ys$year)))
 int_ys_expand$year <- factor(int_ys_expand$year, 
-                             levels = levels(us_ys_expand$year))
+                             levels = year_levels)
 int_ys_expand$yid <- factor(int_ys_expand$yid, 
-                            levels = levels(us_ys_expand$yid))
+                            levels = year_levels)
+int_ys_us_expand$year <- factor(int_ys_us_expand$year, 
+                            levels = year_levels)
+int_ys_us_expand$yid <- factor(int_ys_us_expand$yid, 
+                           levels = year_levels)
+us_ys_expand$year <- factor(us_ys_expand$year, 
+                            levels = year_levels)
+us_ys_expand$yid <- factor(us_ys_expand$yid, 
+                           levels = year_levels)
+us_ys_blz_expand$year <- factor(us_ys_blz_expand$year, 
+                            levels = year_levels)
+us_ys_blz_expand$yid <- factor(us_ys_blz_expand$yid, 
+                           levels = year_levels)
 
 
-ExPanD(list(int_ys = int_ys_expand, us_ys = us_ys_expand), df_def = ys_def_expand, 
-       df_name = c("International country year sample", "US country year sample"),
-       config_list = config_int, title = "Exploring the Accrual Landscape", 
-       abstract = exp_abs, components = c(T, F, T, T, T, F , F, rep(T, 5)))
+ExPanD(list(int_ys = int_ys_expand, int_ys_us = int_ys_us_expand, 
+            us_ys = us_ys_expand, us_ys_blz = us_ys_blz_expand), df_def = ys_def_expand, 
+       df_name = c("International panel sample", 
+                   "International panel sample, including the US",
+                   "US time-series sample",
+                   "US time-series sample, BLZ definitions"),
+       config_list = config_int, title = "Exploring the Accrual Landscape by Open Science", 
+       abstract = exp_abs, components = c(T, T, T, T, T, F, F, rep(T, 5)))
 
 # Everything below this line will not be run automatically
 # as ExPanD does not return. Run it if you need it 
-
-
-# --- Start Expand with U.S. sample --------------------------------------------
-
-ExPanD(list(int_ys = int_ys_expand, us_ys = us_ys_expand), df_def = ys_def_expand, 
-       df_name = c("International country year sample", "US country year sample"),
-       config_list = config_us, title = "Exploring the Accrual Landscape", 
-       abstract = exp_abs, components = c(F, F, T, T, T, F , F, T, F, T, T, T))
 
 
 # --- Prepare scatter plot video -----------------------------------------------
@@ -212,9 +243,7 @@ p <- create_scatter_video(test_sample, "Test sample", x="cfo", y="tacc",
                      nframes = 1275, fps = 25)
 
 
-# --- Additional analyses (not in the paper yet) -------------------------------
 
-prepare_fig_corr_change_by_ind(test_sample)
-prepare_rolling_bs_figure(test_sample, 10, "level", "adjr2")
-prepare_rolling_bs_figure(test_sample, 20, "dd", "adjr2")
+
+
 
