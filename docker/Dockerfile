@@ -14,10 +14,10 @@ RUN apt-get update \
 RUN curl -sSf https://static.rust-lang.org/rustup.sh | sh
   
 RUN  R -e "install.packages(c('Quandl', 'gtools', 'ggpubr', 'lfe',  \
-                            'moments', 'Hmisc', 'ggridges', 'latex2exp', 'RPostgres', \
-                            'kableExtra', 'shinycssloaders', 'ExPanDaR'), \
-                            repos=c(CRAN = 'https://mran.microsoft.com/snapshot/2018-10-13'))" \
-  && R -e "devtools::install_github('thomasp85/gganimate@81e8234')"
+                            'moments', 'Hmisc', 'ggridges', 'latex2exp', \
+                            'RPostgres', 'kableExtra', 'shinycssloaders', \
+                            'ExPanDaR', 'gganimate', 'transformr'), \
+                            repos=c(CRAN = 'https://mran.microsoft.com/snapshot/2019-01-04'))" 
 
 # Install some additional texlife packages
 # First make sure that tlmgr is current
