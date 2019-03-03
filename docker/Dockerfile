@@ -4,7 +4,7 @@ MAINTAINER Joachim Gassen "gassen@wiwi.hu-berlin.de"
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg curl \
-  libudunits2-dev
+  libudunits2-dev libgdal-dev
 
 # 2018-10-09:  
 # The package gifski (needed by gganimate) 
