@@ -3,7 +3,8 @@ FROM rocker/verse:3.5.1
 MAINTAINER Joachim Gassen "gassen@wiwi.hu-berlin.de" 
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ffmpeg curl
+  && apt-get install -y --no-install-recommends ffmpeg curl \
+  libudunits2-dev
 
 # 2018-10-09:  
 # The package gifski (needed by gganimate) 

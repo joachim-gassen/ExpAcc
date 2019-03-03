@@ -1,12 +1,10 @@
 # --- Header -------------------------------------------------------------------
-# (C) Joachim Gassen 2018, gassen@wiwi.hu-berlin.de
+# (C) Joachim Gassen 2019, gassen@wiwi.hu-berlin.de
 # See LICENSE file for details 
 #
 # This code produces all the analyses for the paper 
 #
-#   Exploring the Accrual Landscape
-#
-# authored by Martin Bierey and Joachim Gassen
+#   Exploring the Accrual Landscape by Open Science
 #
 # Make sure that you set your working directory ("setwd()") to 
 # where this file is before sourcing this file.
