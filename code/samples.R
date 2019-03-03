@@ -18,7 +18,6 @@ read_cstat_us_raw_data <- function(rds_file) {
   us$datadate <- as.Date(as.character(us$datadate), format="%Y-%m-%d")
   us$fyear <- factor(us$fyear, ordered = TRUE)
   us$fyr <- factor(us$fyr, ordered = TRUE)
-  us$sic <- factor(us$sic, ordered = TRUE)
   us$spcindcd <- factor(us$spcindcd)
   us$aqc[is.na(us$aqc)] <- 0
   us$aqs[is.na(us$aqs)] <- 0
@@ -31,7 +30,7 @@ read_cstat_us_raw_data <- function(rds_file) {
 
 prepare_us_samples <- function() {
   cstat_sample <- read_cstat_us_raw_data("data/cstat_us_sample.RDS")
-  vd <- read_csv("raw_data/blz_var_definitions.csv")
+  vd <- read_csv("raw_data/blz_var_definitions.csv", col_types = cols())
 
   if (refresh) {
     cpiauscl <- Quandl("FRED/CPIAUCSL")
@@ -49,9 +48,11 @@ prepare_us_samples <- function() {
   ff12 <- readRDS("raw_data/ff_12_ind.RDS")[,c(1,3)]
   ff12$ff12ind_desc <- factor(gsub(" \\(.*", "", gsub( " --.*$", "", ff12$ff12ind_desc)),
                               levels = gsub(" \\(.*", "", gsub( " --.*$", "", levels(ff12$ff12ind_desc))))
+  ff48$sic <- as.character(ff48$sic)
+  ff12$sic <- as.character(ff12$sic)
   
   cstat_sample %>%
-    left_join(cpi) %>%
+    left_join(cpi, by = c("gvkey", "fyear")) %>%
     left_join(ff12, by = "sic") %>%
     left_join(ff48, by = "sic") %>%
     calc_variables(vd$var_name, vd$var_def, vd$type) -> raw_sample
@@ -156,22 +157,22 @@ prepare_us_yearly_sample <- function(ts) {
   rr <- generate_byvar_regression_stats(ts, dvs = "tacc", idvs = "cfo", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("level_", names(rr)[2:length(names(rr))])
   rr$year <- as.numeric(rr$year)
-  ys <- left_join(ys, rr)
+  ys <- left_join(ys, rr, by = "year")
   rr <- generate_byvar_regression_stats(ts, dvs = "dtacc", idvs = "dcfo", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("change_", names(rr)[2:length(names(rr))])
   rr$year <- as.numeric(rr$year)
-  ys <- left_join(ys, rr)
+  ys <- left_join(ys, rr, by = "year")
   rr <- generate_byvar_regression_stats(ts, dvs = "tacc", idvs = c("lagcfo", "cfo", "leadcfo"), minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("dd_", names(rr)[2:length(names(rr))])
   rr$year <- as.numeric(rr$year)
-  ys <- left_join(ys, rr)
+  ys <- left_join(ys, rr, by = "year")
 
   rr <- generate_byvar_regression_stats(ts, dvs = "sales", idvs = c("lagexpenses", "expenses", "leadexpenses"), minobs = 30)
   rr <- rr %>%
     mutate(year = as.numeric(year)) %>%
     rename(dt_adjr2 = adjr2) %>%
     select(year, dt_adjr2)
-  ys <- left_join(ys, rr)
+  ys <- left_join(ys, rr, by = "year")
   
   ctrls_str <- "cfo_mean + cfo_sd + cfo_skew + cfo_kurt"
   for (model in c("level", "change", "dd")) {
@@ -199,7 +200,7 @@ prepare_us_yearly_sample <- function(ts) {
 prepare_int_samples <- function() {
   if (refresh) {
     url <- getURL("https://raw.githubusercontent.com/lukes/ISO-3166-Countries-with-Regional-Codes/master/slim-3/slim-3.csv")
-    df <- read.csv(text = url, stringsAsFactors = FALSE)
+    df <- read.csv(text = url, stringsAsFactors = FALSE, col_types = cols())
     iso3_names <- df[,c(2,1)]
     names(iso3_names) <- c("loc", "country_name")
     iso3_names$country_name[iso3_names$loc == "GBR"] <- "United Kingdom"
@@ -207,7 +208,7 @@ prepare_int_samples <- function() {
   } else iso3_names <- readRDS("data/iso3_country_names.RDS")
   int <- clear_labels(readRDS("data/cstat_int_sample.RDS")) %>%
     mutate(datadate = as.Date(datadate, format="%Y-%m-%d")) %>%
-    left_join(iso3_names) %>%
+    left_join(iso3_names, by = "loc") %>%
     filter(fyear < 2017) %>%
     arrange(gvkey, fyear, desc(datadate)) %>%
     distinct(gvkey, fyear, .keep_all = TRUE)
@@ -216,12 +217,11 @@ prepare_int_samples <- function() {
   int$datadate <- as.Date(as.character(int$datadate), format="%Y%m%d")
   int$fyear <- factor(int$fyear, ordered = TRUE)
   int$fyr <- factor(int$fyr, ordered = TRUE)
-  int$sic <- factor(int$sic, ordered = TRUE)
   int$spcindcd <- factor(int$spcindcd)
   int$ctryr <- paste0(int$loc, int$fyear)
   int_raw_sample <- int
   
-  vd <- read_csv("raw_data/blz_var_definitions.csv")
+  vd <- read_csv("raw_data/blz_var_definitions.csv", col_types = cols())
   vd[13,] <- list("tacc_post_1987", "(ib - oancf)/avg_at", "numerical", 1)
   vd[15,] <- list("tacc", "ifelse(is.finite(tacc_post_1987), tacc_post_1987, tacc_pre_1988)", "numerical", 1)
   vd[16,] <- list("cfo", "ifelse(is.finite(oancf/avg_at), oancf/avg_at, e - tacc_pre_1988)", "numerical", 1)
@@ -234,6 +234,9 @@ prepare_int_samples <- function() {
   ff12 <- readRDS("raw_data/ff_12_ind.RDS")[,c(1,3)]
   ff12$ff12ind_desc <- factor(gsub(" \\(.*", "", gsub( " --.*$", "", ff12$ff12ind_desc)),
                               levels = gsub(" \\(.*", "", gsub( " --.*$", "", levels(ff12$ff12ind_desc))))  
+  ff48$sic <- as.character(ff48$sic)
+  ff12$sic <- as.character(ff12$sic)
+  
   int %>%
     left_join(ff12, by = "sic") %>%
     left_join(ff48, by = "sic") %>%
@@ -343,19 +346,19 @@ prepare_int_yearly_sample <- function(is) {
   is$ctr_year <- factor(paste0(as.character(is$country), "_", as.character(is$year)))
   rr <- generate_byvar_regression_stats(is, dvs = "tacc", idvs = "cfo", byvar = "ctr_year", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("level_", names(rr)[2:length(names(rr))])
-  ys <- left_join(ys, rr)
+  ys <- left_join(ys, rr, by = "ctr_year")
   rr <- generate_byvar_regression_stats(is, dvs = "dtacc", idvs = "dcfo", byvar = "ctr_year", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("change_", names(rr)[2:length(names(rr))])
-  ys <- left_join(ys, rr)
+  ys <- left_join(ys, rr, by = "ctr_year")
   rr <- generate_byvar_regression_stats(is, dvs = "tacc", idvs = c("lagcfo", "cfo", "leadcfo"), byvar = "ctr_year", minobs = 30)
   names(rr)[2:length(names(rr))] <- paste0("dd_", names(rr)[2:length(names(rr))])
-  ys <- left_join(ys, rr)
+  ys <- left_join(ys, rr, by = "ctr_year")
   
   rr <- generate_byvar_regression_stats(is, dvs = "sales", idvs = c("lagexpenses", "expenses", "leadexpenses"), byvar = "ctr_year", minobs = 30)
   rr <- rr %>%
     rename(dt_adjr2 = adjr2) %>%
     select(ctr_year, dt_adjr2)
-  ys <- left_join(ys, rr)
+  ys <- left_join(ys, rr, by = "ctr_year")
   
   ys %>% 
     group_by(country) %>% 

@@ -25,13 +25,13 @@ rm (list=ls())
 # Your password will not be stored.
 # Pulling data will take a while.
 
-pull_wrds_data <- TRUE
+pull_wrds_data <- FALSE
 
 # Set the below to TRUE when you want repull consumer price data 
 # and the iso3 country level name table from the web 
 # This also needs to be done at least once.
 
-refresh <- TRUE
+refresh <- FALSE
 
 # The code below uses a set of R packages, listed in the
 # 'pkgs' vector. These packages need to be installed to
@@ -102,10 +102,10 @@ if (versionInfo()$version <= "1.1.67")
 
 # --- Attach packages ----------------------------------------------------------
 
-pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", "tidyverse", 
-          "lubridate", "broom", "moments", "Hmisc", "RCurl", "ggridges", 
-          "latex2exp", "RPostgres", "DBI", "ExPanDaR",
-          "thomasp85/gganimate@81e8234")
+pkgs <- c("devtools", "Quandl", "gtools", "ggpubr", "lfe", 
+          "tidyverse", "lubridate", "broom", "moments", "Hmisc", 
+          "RCurl", "ggridges", "latex2exp", "RPostgres", "DBI", 
+          "ExPanDaR", "gganimate", "transformr")
 
 # Instal packages (if not already installed) 
 # and attach them to a temporary library 
